@@ -55,19 +55,8 @@ setup_uid(){
 }
 
 keep_in_foreground() {
-  # As there seems to be no way to let Seafile processes run in the foreground we
-  # need a foreground process. This has a dual use as a supervisor script because
-  # as soon as one process is not running, the command returns an exit code >0
-  # leading to a script abortion thanks to "set -e".
-  while true
-  do
-    for SEAFILE_PROC in "ccnet" "seaf-daemon"
-    do
-      pkill -0 -f "${SEAFILE_PROC}"
-      sleep 1
-    done
-    su - seafile -c "seaf-cli status"
-    sleep 5
+  while true; do
+    tail -f /seafile-client/.ccnet/logs/seafile.log
   done
 }
 

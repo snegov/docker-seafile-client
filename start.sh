@@ -73,5 +73,6 @@ keep_in_foreground() {
 
 setup_uid
 su - seafile -c "seaf-cli start"
+sleep 10
 setup_lib_sync
 keep_in_foreground

@@ -1,8 +1,8 @@
-version: '2'
+version: '3'
 services:
   seafile-client:
     restart: always
-    image: gronis:seafile-client-docker
+    build: .
     container_name: seafile-client
     environment:
       - LIBRARY_ID=<your-library-id-here>
@@ -11,5 +11,7 @@ services:
       - USERNAME=<username>
       - PASSWORD=<password>
       - DATA_DIR=<directory-path-to-sync>
+      - SEAFILE_UID=<your_uid>
+      - SEAFILE_GID=<your_gid>
     volumes:
       - <host-volume-path>:<directory-path-to-sync>

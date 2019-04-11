@@ -3,6 +3,7 @@
 set -e
 set -u
 set -o pipefail
+set -x
 
 DATA_DIR="${DATA_DIR:-/data}"
 SEAFILE_UID="${SEAFILE_UID:-1000}"

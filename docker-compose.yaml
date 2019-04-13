@@ -6,7 +6,7 @@ services:
     container_name: seafile-client
     environment:
       - LIBRARY_ID=<your-library-id-here>
-      - SERVER_URL=<server-url>
+      - SERVER_HOST=<server-host>
       - SERVER_PORT=<server-port>
       - USERNAME=<username>
       - PASSWORD=<password>

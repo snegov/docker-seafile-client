@@ -1,4 +1,4 @@
-FROM debian:stretch-slim
+FROM python:3-slim
 
 RUN apt-get update && apt-get install gnupg -y
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8756C4F765C9AC3CB6B85D62379CE192D401AB61 && \
@@ -8,13 +8,15 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8756C4F765
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /seafile-client
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY start.sh /seafile-client/start.sh
+COPY start.py /seafile-client/start.py
 
-RUN chmod +x /seafile-client/start.sh && \
+RUN chmod +x /seafile-client/start.py && \
     useradd -U -d /seafile-client -s /bin/bash seafile && \
     usermod -G users seafile && \
     chown seafile:seafile -R /seafile-client && \
     su - seafile -c "seaf-cli init -d /seafile-client"
 
-CMD ["./start.sh"]
+CMD ["./start.py"]

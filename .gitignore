@@ -1,0 +1,4 @@
+.env
+.idea/
+.python-version
+docker-compose.yml

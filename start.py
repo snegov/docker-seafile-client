@@ -20,8 +20,9 @@ def setup_uid(uid: int, gid: int):
 
 
 def start_seaf_daemon():
-    os.system(f'su - {DEFAULT_USERNAME} -c "seaf-cli start"')
-    time.sleep(10)
+    cmd = 'seaf-cli start'
+    subprocess.run(['su', '-', DEFAULT_USERNAME, '-c', cmd])
+    time.sleep(5)
 
 
 def create_dir(dir_path: str):
@@ -78,7 +79,31 @@ class SeafileClient:
                '-u', self.user,
                '-p', self.password]
         cmd = ' '.join(cmd)
-        os.system(f'su - {DEFAULT_USERNAME} -c "{cmd}"')
+        subprocess.run(['su', '-', DEFAULT_USERNAME, '-c', cmd])
+
+    def get_status(self):
+        cmd = 'seaf-cli status'
+        out = subprocess.check_output(['su', '-', DEFAULT_USERNAME, '-c', cmd])
+        out = out.decode().splitlines()
+
+        statuses = dict()
+        for line in out:
+            if line.startswith('#') or not line.strip():
+                continue
+            lib, status = line.split(sep='\t', maxsplit=1)
+            status = status.replace('\t', ' ')
+            statuses[lib] = status
+        return statuses
+
+    def watch_status(self):
+        prev_status = dict()
+        while True:
+            time.sleep(5)
+            cur_status = self.get_status()
+            for folder, state in cur_status.items():
+                if state != prev_status.get(folder):
+                    print(f"Synced folder {folder}: {state}")
+                prev_status[folder] = cur_status[folder]
 
 
 def main():
@@ -99,7 +124,7 @@ def main():
     client = SeafileClient(args.host, args.port, args.username, args.password)
     for lib_id in args.libs.split(sep=":"):
         client.sync_lib(lib_id, args.data_dir)
-    tail_f("/seafile-client/.ccnet/logs/seafile.log")
+    client.watch_status()
 
     return 0
 

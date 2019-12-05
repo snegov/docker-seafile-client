@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import time
@@ -6,6 +7,10 @@ import requests
 
 from .consts import DEFAULT_USERNAME
 from .misc import create_dir
+
+
+logging.basicConfig(format="%(asctime)s %(message)s",
+                    level=logging.INFO)
 
 
 class SeafileClient:
@@ -60,7 +65,8 @@ class SeafileClient:
             if line.startswith('#') or not line.strip():
                 continue
             lib, status = line.split(sep='\t', maxsplit=1)
-            status = status.replace('\t', ' ')
+            lib = lib.strip()
+            status = " ".join(status.split())
             statuses[lib] = status
         return statuses
 
@@ -71,7 +77,7 @@ class SeafileClient:
             cur_status = self.get_status()
             for folder, state in cur_status.items():
                 if state != prev_status.get(folder):
-                    print(f"Library {folder}:\t{state}")
+                    logging.info(f"Library {folder}:\t{state}")
                 prev_status[folder] = cur_status[folder]
 
 

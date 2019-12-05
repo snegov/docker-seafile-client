@@ -2,7 +2,7 @@ import os
 import pwd
 import subprocess
 
-from .client import DEFAULT_USERNAME
+from .consts import DEFAULT_USERNAME
 
 
 def setup_uid(uid: int, gid: int):

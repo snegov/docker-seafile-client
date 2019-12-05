@@ -4,9 +4,8 @@ import time
 
 import requests
 
+from .consts import DEFAULT_USERNAME
 from .misc import create_dir
-
-DEFAULT_USERNAME = "seafile"
 
 
 class SeafileClient:
@@ -72,7 +71,7 @@ class SeafileClient:
             cur_status = self.get_status()
             for folder, state in cur_status.items():
                 if state != prev_status.get(folder):
-                    print(f"Synced folder {folder}: {state}")
+                    print(f"Library {folder}:\t{state}")
                 prev_status[folder] = cur_status[folder]
 
 

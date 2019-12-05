@@ -5,8 +5,7 @@ import os
 import os.path
 import sys
 
-from seafile_client import SeafileClient
-from seafile_client.client import start_seaf_daemon
+from seafile_client import SeafileClient, start_seaf_daemon
 from seafile_client.misc import setup_uid, create_dir
 
 

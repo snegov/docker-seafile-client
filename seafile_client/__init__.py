@@ -1,1 +1,1 @@
-from .client import SeafileClient
+from .client import SeafileClient, start_seaf_daemon

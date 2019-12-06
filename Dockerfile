@@ -11,7 +11,8 @@ WORKDIR /seafile-client
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY start.py /seafile-client/start.py
+COPY seafile_client ./seafile_client/
+COPY start.py ./start.py
 
 RUN chmod +x /seafile-client/start.py && \
     useradd -U -d /seafile-client -s /bin/bash seafile && \

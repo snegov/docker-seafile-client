@@ -33,7 +33,3 @@ services:
  - `DATA_DIR=<directory-path-to-sync>`  The path where to put the files
  - `SEAFILE_UID=<uid>`                  Downloaded files will have this uid
  - `SEAFILE_GID=<gid>`                  Downloaded files will have this gid
-
-## How to find library id:
-
-<img src="imgs/help.png"/>

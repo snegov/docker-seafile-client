@@ -9,7 +9,7 @@ version: '3'
 services:
   seafile-client:
     restart: always
-    build: .
+    image: snegov/seafile-client
     container_name: seafile-client
     environment:
       - LIBRARY_ID=<your-library-id-here>

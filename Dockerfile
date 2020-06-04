@@ -1,6 +1,6 @@
 FROM python:3-slim
 
-RUN apt-get update && apt-get install gnupg -y
+RUN apt-get update && apt-get install gnupg -y && rm -rf /var/lib/apt/lists/*
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8756C4F765C9AC3CB6B85D62379CE192D401AB61 && \
     echo deb http://deb.seadrive.org buster main | tee /etc/apt/sources.list.d/seafile.list && \
     apt-get update -y && \

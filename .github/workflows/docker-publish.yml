@@ -40,3 +40,5 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: snegov/seafile-client
           tag_with_ref: true
+          add_git_labels: true
+          push: ${{ startsWith(github.ref, 'refs/tags/') }}

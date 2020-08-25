@@ -2,6 +2,7 @@ import logging
 import os
 import subprocess
 import time
+from urllib.parse import urlparse
 
 import requests
 
@@ -15,7 +16,8 @@ logging.basicConfig(format="%(asctime)s %(message)s",
 
 class SeafileClient:
     def __init__(self, host: str, user: str, passwd: str):
-        self.url = requests.get(f"http://{host}").url
+        up = urlparse(requests.get(f"http://{host}").url)
+        self.url = f"{up.scheme}://{up.netloc}"
         self.user = user
         self.password = passwd
         self.__token = None

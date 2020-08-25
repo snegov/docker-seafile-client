@@ -14,8 +14,8 @@ logging.basicConfig(format="%(asctime)s %(message)s",
 
 
 class SeafileClient:
-    def __init__(self, host: str, port: int, user: str, passwd: str):
-        self.url = f"https://{host}:{port}"
+    def __init__(self, host: str, user: str, passwd: str):
+        self.url = requests.get(f"http://{host}").url
         self.user = user
         self.password = passwd
         self.__token = None

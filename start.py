@@ -15,7 +15,6 @@ def main():
     parser.add_argument("--gid", default=os.getenv("SEAFILE_GID"), type=int)
     parser.add_argument("--data-dir", default=os.getenv("DATA_DIR"))
     parser.add_argument("--host", default=os.getenv("SERVER_HOST"))
-    parser.add_argument("--port", default=os.getenv("SERVER_PORT"), type=int)
     parser.add_argument("--username", default=os.getenv("USERNAME"))
     parser.add_argument("--password", default=os.getenv("PASSWORD"))
     parser.add_argument("--libs", default=os.getenv("LIBRARY_ID"))
@@ -24,7 +23,7 @@ def main():
     setup_uid(args.uid, args.gid)
     start_seaf_daemon()
     create_dir(args.data_dir)
-    client = SeafileClient(args.host, args.port, args.username, args.password)
+    client = SeafileClient(args.host, args.username, args.password)
     for lib_id in args.libs.split(sep=":"):
         client.sync_lib(lib_id, args.data_dir)
     client.watch_status()

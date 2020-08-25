@@ -14,7 +14,6 @@ services:
     environment:
       - LIBRARY_ID=<your-library-id-here>
       - SERVER_HOST=<server-host>
-      - SERVER_PORT=<server-port>
       - USERNAME=<username>
       - PASSWORD=<password>
       - DATA_DIR=<directory-path-to-sync>
@@ -26,8 +25,7 @@ services:
 
 ## Environment variables:
  - `LIBRARY_ID=<your-library-id-here>`  ID of library to sync; multiple libraries could be separated by colon `:`
- - `SERVER_HOST=<server-host>`          Hostname of your seafile server, eg: seafile.example.com
- - `SERVER_PORT=<server-port>`          Which port the server is hosted on: usually 443 (https) or 80 (http)
+ - `SERVER_HOST=<server-host>`          Hostname of your seafile server, eg: seafile.example.com. If you're using non-standart port, specify it here, eg: seafile.example.com:8080
  - `USERNAME=<username>`                Seafile account username
  - `PASSWORD=<password>`                Seafile account password
  - `DATA_DIR=<directory-path-to-sync>`  The path where to put the files

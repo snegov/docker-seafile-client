@@ -7,7 +7,6 @@ services:
     environment:
       - LIBRARY_ID=<your-library-id-here>
       - SERVER_HOST=<server-host>
-      - SERVER_PORT=<server-port>
       - USERNAME=<username>
       - PASSWORD=<password>
       - DATA_DIR=<directory-path-to-sync>

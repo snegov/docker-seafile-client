@@ -1,10 +1,10 @@
 FROM python:3-slim
 
-RUN apt-get update && apt-get install gnupg -y && rm -rf /var/lib/apt/lists/*
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8756C4F765C9AC3CB6B85D62379CE192D401AB61 && \
-    echo deb http://deb.seadrive.org buster main | tee /etc/apt/sources.list.d/seafile.list && \
+RUN apt-get update && apt-get install gnupg curl -y && rm -rf /var/lib/apt/lists/*
+RUN curl https://linux-clients.seafile.com/seafile.key | apt-key add - && \
+    echo 'deb [arch=amd64] http://linux-clients.seafile.com/seafile-deb/buster/ stable main' > /etc/apt/sources.list.d/seafile.list && \
     apt-get update -y && \
-    apt-get install -y seafile-cli procps curl grep && \
+    apt-get install -y seafile-cli procps grep && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /seafile-client

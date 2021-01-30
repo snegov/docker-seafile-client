@@ -1,8 +1,8 @@
 FROM python:3-slim
 
 RUN apt-get update && apt-get install gnupg curl -y && rm -rf /var/lib/apt/lists/*
-RUN curl https://linux-clients.seafile.com/seafile.key | apt-key add - && \
-    echo 'deb [arch=amd64] http://linux-clients.seafile.com/seafile-deb/buster/ stable main' > /etc/apt/sources.list.d/seafile.list && \
+RUN curl https://linux-clients.seafile.com/seafile.asc | apt-key add - && \
+    echo 'deb [arch=amd64] https://linux-clients.seafile.com/seafile-deb/buster/ stable main' > /etc/apt/sources.list.d/seafile.list && \
     apt-get update -y && \
     apt-get install -y seafile-cli procps grep && \
     rm -rf /var/lib/apt/lists/*

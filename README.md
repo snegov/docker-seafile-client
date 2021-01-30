@@ -1,7 +1,7 @@
 # docker-seafile-client
-Run a seafile client inside docker witch can sync files from seafile repositories
+Run a seafile client inside docker which can sync files from seafile repositories.
 
-See docker-compose how to use.
+See [docker-compose](docker-compose.example.yml) how to use.
 
 ## Docker-compose example:
 ```yaml

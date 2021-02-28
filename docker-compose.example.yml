@@ -1,16 +1,17 @@
 version: '3'
+
 services:
   seafile-client:
     restart: always
     image: snegov/seafile-client
-    container_name: seafile-client
     environment:
-      - LIBRARY_ID=<your-library-id-here>
-      - SERVER_HOST=<server-host>
-      - USERNAME=<username>
-      - PASSWORD=<password>
-      - SEAFILE_UID=<your_uid>
-      - SEAFILE_GID=<your_gid>
+      - LIBRARY_ID="79867cbf-2944-488d-9105-859463ecdf9e:8078e3ff-b2a0-450a-b4dd-c1ed9ef18294"
+      - SERVER_HOST=seafile.example.com
+      - USERNAME=user
+      - PASSWORD=password
+      - SEAFILE_UID=1000
+      - SEAFILE_GID=100
+    hostname: docker-seafcli
     volumes:
       - seafile-data:/seafile-client/seafile-data
       - /home/johndow/seafile:/data

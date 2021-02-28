@@ -20,4 +20,6 @@ RUN chmod +x /seafile-client/start.py && \
     chown seafile:seafile -R /seafile-client && \
     su - seafile -c "seaf-cli init -d /seafile-client"
 
+VOLUME /seafile-client/seafile-data
+
 CMD ["./start.py"]

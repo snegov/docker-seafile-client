@@ -12,4 +12,9 @@ services:
       - SEAFILE_UID=<your_uid>
       - SEAFILE_GID=<your_gid>
     volumes:
+      - seafile-data:/seafile-client/seafile-data
       - /home/johndow/seafile:/data
+
+
+volumes:
+  seafile-data:

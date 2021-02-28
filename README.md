@@ -19,7 +19,11 @@ services:
       - SEAFILE_UID=<your_uid>
       - SEAFILE_GID=<your_gid>
     volumes:
+      - seafile-data:/seafile-client/seafile-data
       - <host-volume-path>:/data
+
+volumes:
+  seafile-data:
 ```
 
 Inside container libraries' content will be put in `/data` directory, so map your host directory to it.

@@ -11,9 +11,9 @@ from seafile_client.misc import setup_uid, create_dir
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--uid", default=os.getenv("SEAFILE_UID"), type=int)
-    parser.add_argument("--gid", default=os.getenv("SEAFILE_GID"), type=int)
-    parser.add_argument("--data-dir", default=os.getenv("DATA_DIR"))
+    parser.add_argument("--uid", default=os.getenv("SEAFILE_UID", default=1000), type=int)
+    parser.add_argument("--gid", default=os.getenv("SEAFILE_GID", default=100), type=int)
+    parser.add_argument("--data-dir", default=os.getenv("DATA_DIR", default="/data"))
     parser.add_argument("--host", default=os.getenv("SERVER_HOST"))
     parser.add_argument("--username", default=os.getenv("USERNAME"))
     parser.add_argument("--password", default=os.getenv("PASSWORD"))

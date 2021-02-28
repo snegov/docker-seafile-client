@@ -9,8 +9,7 @@ services:
       - SERVER_HOST=<server-host>
       - USERNAME=<username>
       - PASSWORD=<password>
-      - DATA_DIR=<directory-path-to-sync>
       - SEAFILE_UID=<your_uid>
       - SEAFILE_GID=<your_gid>
     volumes:
-      - <host-volume-path>:<directory-path-to-sync>
+      - /home/johndow/seafile:/data

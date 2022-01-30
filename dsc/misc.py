@@ -2,7 +2,7 @@ import os
 import pwd
 import subprocess
 
-from .consts import DEFAULT_USERNAME
+from dsc.consts import DEFAULT_USERNAME
 
 
 def setup_uid(uid: int, gid: int):
@@ -19,7 +19,3 @@ def create_dir(dir_path: str):
     else:
         if not os.path.isdir(dir_path):
             raise RuntimeError(f"Data dir {dir_path} is not a directory")
-
-
-def tail_f(fpath):
-    os.system(f"tail -f {fpath}")

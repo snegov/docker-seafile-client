@@ -34,7 +34,7 @@ Inside container libraries' content will be put in `/data` directory, so map you
 Also you could check [docker-compose example](docker-compose.example.yml).
 
 ## Environment variables:
- - `LIBRARY_ID=<your-library-id-here>`  ID of library to sync; multiple libraries could be separated by colon `:`.
+ - `LIBRARY_ID=<your-library-id-here>`  Library to sync, ID or name; multiple libraries could be separated by colon `:`.
  - `SERVER_HOST=<server-host>`          Hostname of your seafile server, eg: `seafile.example.com`. If you're using non-standart port, specify it here, eg: `seafile.example.com:8080`.
  - `USERNAME=<username>`                Seafile account username.
  - `PASSWORD=<password>`                Seafile account password.

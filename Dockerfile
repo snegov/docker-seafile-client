@@ -1,4 +1,4 @@
-FROM python:3-slim
+FROM python:3.8.12-slim-buster
 
 RUN apt-get update && apt-get install gnupg curl -y && rm -rf /var/lib/apt/lists/*
 RUN curl https://linux-clients.seafile.com/seafile.asc | apt-key add - && \
@@ -11,7 +11,7 @@ WORKDIR /seafile-client
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY seafile_client ./seafile_client/
+COPY dsc ./dsc/
 COPY start.py ./start.py
 
 RUN chmod +x /seafile-client/start.py && \

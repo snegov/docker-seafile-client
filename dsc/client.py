@@ -9,7 +9,7 @@ from cached_property import cached_property_with_ttl
 import requests
 
 from dsc import consts
-from dsc.misc import create_dir
+from dsc.misc import create_dir, hide_password
 
 _lg = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ class SeafileClient:
     def token(self):
         if self.__token is None:
             url = f"{self.url}/api2/auth-token/"
+            _lg.info("Fetching token: %s", url)
             r = requests.post(url, data={"username": self.user,
                                          "password": self.password})
             if r.status_code != 200:
@@ -39,6 +40,7 @@ class SeafileClient:
     @cached_property_with_ttl(ttl=60)
     def remote_libraries(self) -> dict:
         url = f"{self.url}/api2/repos/"
+        _lg.info("Fetching remote libraries: %s", url)
         auth_header = {"Authorization": f"Token {self.token}"}
         r = requests.get(url, headers=auth_header)
         if r.status_code != 200:
@@ -62,11 +64,12 @@ class SeafileClient:
                '-d', lib_dir,
                '-u', self.user,
                '-p', self.password]
-        cmd = ' '.join(cmd)
-        subprocess.run(['su', '-', consts.DEFAULT_USERNAME, '-c', cmd])
+        _lg.info("Syncing library %s: %s", lib_name, ' '.join(hide_password(cmd, self.password)))
+        subprocess.run(['su', '-', consts.DEFAULT_USERNAME, '-c', ' '.join(cmd)])
 
     def get_status(self):
         cmd = 'seaf-cli status'
+        _lg.debug("Fetching seafile client status: %s", cmd)
         out = subprocess.check_output(['su', '-', consts.DEFAULT_USERNAME, '-c', cmd])
         out = out.decode().splitlines()
 
@@ -92,6 +95,7 @@ class SeafileClient:
 
     def get_local_libraries(self) -> set:
         cmd = 'seaf-cli list'
+        _lg.info("Listing local libraries: %s", cmd)
         out = subprocess.check_output(['su', '-', consts.DEFAULT_USERNAME, '-c', cmd])
         out = out.decode().splitlines()[1:]     # first line is a header
 
@@ -102,6 +106,26 @@ class SeafileClient:
         return local_libs
 
 
+def check_seaf_daemon_is_ready() -> bool:
+    cmd = 'seaf-cli status'
+    _lg.info("Checking seafile daemon status: %s", cmd)
+    proc = subprocess.run(
+        ['su', '-', consts.DEFAULT_USERNAME, '-c', cmd],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+    return proc.returncode == 0
+
+
 def start_seaf_daemon():
     cmd = 'seaf-cli start'
+    _lg.info("Starting seafile daemon: %s", cmd)
     subprocess.run(['su', '-', consts.DEFAULT_USERNAME, '-c', cmd])
+    _lg.info("Waiting for seafile daemon to start")
+
+    while True:
+        if check_seaf_daemon_is_ready():
+            break
+        time.sleep(5)
+
+    _lg.info("Seafile daemon is ready")

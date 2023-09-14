@@ -19,3 +19,11 @@ def create_dir(dir_path: str):
     else:
         if not os.path.isdir(dir_path):
             raise RuntimeError(f"Data dir {dir_path} is not a directory")
+
+
+def hide_password(cmd: list, password: str) -> list:
+    cmd = cmd.copy()
+    for i, arg in enumerate(cmd):
+        if arg == password:
+            cmd[i] = '********'
+    return cmd

@@ -1,19 +1,31 @@
-FROM python:3.8.12-slim-buster
+FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install gnupg curl -y && rm -rf /var/lib/apt/lists/*
+# Install seafile client
+RUN apt-get update && \
+    apt-get install gnupg curl python3.11-venv -y && \
+    rm -rf /var/lib/apt/lists/*
 RUN curl https://linux-clients.seafile.com/seafile.asc | apt-key add - && \
-    echo 'deb [arch=amd64] https://linux-clients.seafile.com/seafile-deb/buster/ stable main' > /etc/apt/sources.list.d/seafile.list && \
+    echo 'deb [arch=amd64] https://linux-clients.seafile.com/seafile-deb/bookworm/ stable main' \
+    > /etc/apt/sources.list.d/seafile.list && \
     apt-get update -y && \
-    apt-get install -y seafile-cli procps grep && \
+    apt-get install -y seafile-cli && \
     rm -rf /var/lib/apt/lists/*
 
+# Use virtual environment
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# Install app requirements
 WORKDIR /seafile-client
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy app
 COPY dsc ./dsc/
 COPY start.py ./start.py
 
+# Create seafile user and init seafile client
 RUN chmod +x /seafile-client/start.py && \
     useradd -U -d /seafile-client -s /bin/bash seafile && \
     usermod -G users seafile && \
@@ -21,5 +33,4 @@ RUN chmod +x /seafile-client/start.py && \
     su - seafile -c "seaf-cli init -d /seafile-client"
 
 VOLUME /seafile-client/seafile-data
-
 CMD ["./start.py"]

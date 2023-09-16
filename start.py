@@ -6,7 +6,7 @@ import os
 import os.path
 import sys
 
-from dsc import SeafileClient, start_seaf_daemon
+from dsc import SeafileClient, const
 from dsc.misc import setup_uid, create_dir
 
 _lg = logging.getLogger('dsc')
@@ -17,8 +17,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--uid", default=os.getenv("SEAFILE_UID", default=1000), type=int)
-    parser.add_argument("--gid", default=os.getenv("SEAFILE_GID", default=100), type=int)
-    parser.add_argument("--data-dir", default=os.getenv("DATA_DIR", default="/data"))
+    parser.add_argument("--gid", default=os.getenv("SEAFILE_GID", default=1000), type=int)
     parser.add_argument("--host", default=os.getenv("SERVER_HOST"))
     parser.add_argument("--username", default=os.getenv("USERNAME"))
     parser.add_argument("--password", default=os.getenv("PASSWORD"))
@@ -26,12 +25,13 @@ def main():
     args = parser.parse_args()
 
     setup_uid(args.uid, args.gid)
-    create_dir(args.data_dir)
-    start_seaf_daemon()
+    create_dir(const.DEFAULT_APP_DIR)
+
+    client = SeafileClient(args.host, args.username, args.password, const.DEFAULT_APP_DIR)
+    client.init_config()
+    client.start_daemon()
 
     libs_to_sync = set()
-
-    client = SeafileClient(args.host, args.username, args.password)
     for arg_lib in args.libs.split(sep=":"):
         lib_id = client.get_library_id(arg_lib)
         if lib_id:
@@ -42,8 +42,17 @@ def main():
     # don't start to sync libraries already in sync
     libs_to_sync -= client.get_local_libraries()
 
+    # check for deprecated /data directory
+    if os.path.isdir(const.DEPRECATED_LIBS_DIR):
+        _lg.warning("*** DEPRECATED DIRECTORY FOUND ***")
+        _lg.warning("Deprecated directory %s is found, please mount your host directory with"
+                    " libraries to %s instead", const.DEPRECATED_LIBS_DIR, const.DEFAULT_LIBS_DIR)
+        libs_dir = const.DEPRECATED_LIBS_DIR
+    else:
+        libs_dir = const.DEFAULT_LIBS_DIR
+
     for lib_id in libs_to_sync:
-        client.sync_lib(lib_id, args.data_dir)
+        client.sync_lib(lib_id, libs_dir)
     client.watch_status()
 
     return 0

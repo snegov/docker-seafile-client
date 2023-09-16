@@ -17,7 +17,7 @@ RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Install app requirements
-WORKDIR /seafile-client
+WORKDIR /dsc
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -26,11 +26,11 @@ COPY dsc ./dsc/
 COPY start.py ./start.py
 
 # Create seafile user and init seafile client
-RUN chmod +x /seafile-client/start.py && \
-    useradd -U -d /seafile-client -s /bin/bash seafile && \
+RUN chmod +x /dsc/start.py && \
+    useradd -U -d /dsc -s /bin/bash seafile && \
     usermod -G users seafile && \
-    chown seafile:seafile -R /seafile-client && \
-    su - seafile -c "seaf-cli init -d /seafile-client"
+    mkdir -p /dsc/seafile-data && \
+    chown seafile:seafile -R /dsc
 
-VOLUME /seafile-client/seafile-data
+VOLUME /dsc/seafile-data
 CMD ["./start.py"]

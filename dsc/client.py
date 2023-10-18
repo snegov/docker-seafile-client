@@ -107,7 +107,7 @@ class SeafileClient:
             "-s", self.url,
             "-d", lib_dir,
             "-u", self.user,
-            "-p", self.password,
+            "-p", '"' + self.password + '"',
         ]
         _lg.info(
             "Syncing library %s: %s", lib_name,

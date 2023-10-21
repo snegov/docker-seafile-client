@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 import subprocess
@@ -90,6 +91,19 @@ class SeafileClient:
 
         _lg.info("Seafile daemon is ready")
 
+    def stop_daemon(self):
+        cmd = "seaf-cli stop"
+        _lg.info("Stopping seafile daemon: %s", cmd)
+        subprocess.run(self.__gen_cmd(cmd))
+        _lg.info("Waiting for seafile daemon to stop")
+
+        while True:
+            if not self.daemon_ready:
+                break
+            time.sleep(5)
+
+        _lg.info("Seafile daemon is stopped")
+
     def get_library_id(self, library) -> Optional[str]:
         for lib_id, lib_name in self.remote_libraries.items():
             if library in (lib_id, lib_name):
@@ -152,3 +166,37 @@ class SeafileClient:
             lib_name, lib_id, lib_path = line.rsplit(maxsplit=3)
             local_libs.add(lib_id)
         return local_libs
+
+    def configure(self, args: argparse.Namespace, check_for_daemon: bool = True):
+        need_restart = False
+        # Options can be fetched or set only when daemon is running
+        if check_for_daemon and not self.daemon_ready:
+            self.start_daemon()
+
+        for key, value in args.__dict__.items():
+            if key not in const.AVAILABLE_SEAFCLI_OPTIONS:
+                continue
+
+            # check current value
+            cmd = f"seaf-cli config -k {key}"
+            _lg.info("Checking seafile client option: %s", cmd)
+            proc = subprocess.run(self.__gen_cmd(cmd), stdout=subprocess.PIPE)
+            # stdout looks like "option = value"
+            cur_value = proc.stdout.decode().strip()
+            try:
+                cur_value = cur_value.split(sep="=")[1].strip()
+            except IndexError:
+                cur_value = None
+            if cur_value == str(value):
+                continue
+
+            # set new value
+            cmd = f"seaf-cli config -k {key} -v {value}"
+            _lg.info("Setting seafile client option: %s", cmd)
+            subprocess.run(self.__gen_cmd(cmd))
+            need_restart = True
+
+        if need_restart:
+            _lg.info("Restarting seafile daemon")
+            self.stop_daemon()
+            self.start_daemon()

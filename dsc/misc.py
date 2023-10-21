@@ -43,6 +43,6 @@ def create_dir(dir_path: str):
 def hide_password(cmd: list, password: str) -> list:
     cmd = cmd.copy()
     for i, arg in enumerate(cmd):
-        if arg == password:
-            cmd[i] = '********'
+        if password in arg:
+            cmd[i] = arg.replace(password, "********")
     return cmd

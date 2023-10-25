@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 from cached_property import cached_property_with_ttl
 import requests
+import seafile
 
 from dsc import const
 from dsc.misc import create_dir, hide_password
@@ -21,11 +22,13 @@ class SeafileClient:
                  user: str,
                  passwd: str,
                  app_dir: str = const.DEFAULT_APP_DIR):
+        # check if host supports https
         up = urlparse(requests.get(f"http://{host}").url)
         self.url = f"{up.scheme}://{up.netloc}"
         self.user = user
         self.password = passwd
         self.app_dir = os.path.abspath(app_dir)
+        self.rpc = seafile.RpcClient(os.path.join(self.app_dir, 'seafile-data', 'seafile.sock'))
         self.__token = None
 
     def __str__(self):
@@ -129,20 +132,68 @@ class SeafileClient:
         )
         subprocess.run(self.__gen_cmd(" ".join(cmd)))
 
-    def get_status(self):
-        cmd = "seaf-cli status"
-        _lg.debug("Fetching seafile client status: %s", cmd)
-        out = subprocess.check_output(self.__gen_cmd(cmd))
-        out = out.decode().splitlines()
+    def __print_tx_task(self, tx_task) -> str:
+        """ Print transfer task status """
+        try:
+            percentage = tx_task.block_done / tx_task.block_total * 100
+            tx_rate = tx_task.rate / 1024.0
+            return f" {percentage:.1f}%, {tx_rate:.1f}KB/s"
+        except ZeroDivisionError:
+            return ""
 
+    def get_status(self) -> dict:
+        """ Get status of all libraries """
         statuses = dict()
-        for line in out:
-            if line.startswith("#") or not line.strip():
+
+        # fetch statuses of libraries being cloned
+        tasks = self.rpc.get_clone_tasks()
+        for clone_task in tasks:
+            if clone_task.state == "done":
                 continue
-            lib, status = line.split(sep="\t", maxsplit=1)
-            lib = lib.strip()
-            status = " ".join(status.split())
-            statuses[lib] = status
+
+            elif clone_task.state == "fetch":
+                statuses[clone_task.repo_name] = "downloading"
+                tx_task = self.rpc.find_transfer_task(clone_task.repo_id)
+                statuses[clone_task.repo_name] += self.__print_tx_task(tx_task)
+
+            elif clone_task.state == "error":
+                err = self.rpc.sync_error_id_to_str(clone_task.error)
+                statuses[clone_task.repo_name] = f"error: {err}"
+
+            else:
+                statuses[clone_task.repo_name] = clone_task.state
+
+        # fetch statuses of synced libraries
+        repos = self.rpc.get_repo_list(-1, -1)
+        for repo in repos:
+            auto_sync_enabled = self.rpc.is_auto_sync_enabled()
+            if not auto_sync_enabled or not repo.auto_sync:
+                statuses[repo.name] = "auto sync disabled"
+                continue
+
+            sync_task = self.rpc.get_repo_sync_task(repo.id)
+            if sync_task is None:
+                statuses[repo.name] = "waiting for sync"
+
+            elif sync_task.state in ("uploading", "downloading"):
+                statuses[repo.name] = sync_task.state
+                tx_task = self.rpc.find_transfer_task(repo.id)
+
+                if sync_task.state == "downloading":
+                    if tx_task.rt_state == "data":
+                        statuses[repo.name] += " files"
+                    elif tx_task.rt_state == "fs":
+                        statuses[repo.name] += " file list"
+
+                statuses[repo.name] += self.__print_tx_task(tx_task)
+
+            elif sync_task.state == "error":
+                err = self.rpc.sync_error_id_to_str(sync_task.error)
+                statuses[repo.name] = f"error: {err}"
+
+            else:
+                statuses[repo.name] = sync_task.state
+
         return statuses
 
     def watch_status(self):

@@ -13,7 +13,7 @@ RUN curl https://linux-clients.seafile.com/seafile.asc | apt-key add - && \
 
 # Use virtual environment
 ENV VIRTUAL_ENV=/opt/venv
-RUN python3 -m venv $VIRTUAL_ENV
+RUN python3 -m venv --system-site-packages $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Install app requirements

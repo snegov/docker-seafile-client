@@ -15,7 +15,10 @@ exploit scenarios are discussed in public issues.
 - [ ] Install a supported Seafile CLI version from an official source.
 - [ ] Pin the version and verify its checksum or signature during the build.
 - [ ] Remove `apt-key`, which is deprecated and trusts keys globally.
-- [ ] Add a smoke check for `seaf-cli --version` to the image build.
+- [ ] Add a smoke check that `seaf-cli` runs to the image build. Note that
+  `seaf-cli` has no `--version` flag; use `seaf-cli --help` and assert the
+  expected subcommands, and record the installed version from the package
+  manager instead.
 - [ ] Scan the resulting image and review every high or critical finding.
 
 Acceptance criteria:

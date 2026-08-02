@@ -58,6 +58,14 @@ volumes:
 Libraries will be synced in subdirectories of `/dsc/seafile` directory inside
  container. You can mount it to host directory to access files.
 
+The subdirectory is named after the library, with whitespace replaced by
+ underscores. A library is skipped with a warning when its name cannot be a
+ directory of its own: an empty name, `.`, `..`, or a name containing `/`. Two
+ libraries whose names would produce the same directory both get their library
+ ID appended, so they never share one. Everything is created under the
+ libraries directory (`/dsc/seafile`, or the deprecated `/data` when that
+ exists); a library name can never place it elsewhere.
+
 `hostname` parameter is optional, but it's recommended to set it to some unique
  value, it will be shown in Seafile webUI as client name (`terminal-dsc` in
  given example).

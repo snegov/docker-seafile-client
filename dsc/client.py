@@ -12,7 +12,7 @@ from urllib3.util.retry import Retry
 import seafile
 
 from dsc import const
-from dsc.misc import create_dir, hide_password
+from dsc.misc import create_dir, hide_password, user_cmd
 
 _lg = logging.getLogger(__name__)
 
@@ -56,8 +56,8 @@ class SeafileClient:
     def __str__(self):
         return f"SeafileClient({self.user}@{self.url})"
 
-    def __gen_cmd(self, cmd: str) -> list:
-        return ["su", "-", const.DEFAULT_USERNAME, "-c", cmd]
+    def __gen_cmd(self, argv: list) -> list:
+        return user_cmd(argv)
 
     @property
     def token(self):
@@ -87,8 +87,8 @@ class SeafileClient:
 
     @property
     def daemon_ready(self) -> bool:
-        cmd = "seaf-cli status"
-        _lg.info("Checking seafile daemon status: %s", cmd)
+        cmd = ["seaf-cli", "status"]
+        _lg.info("Checking seafile daemon status: %s", " ".join(cmd))
         proc = subprocess.run(
             self.__gen_cmd(cmd),
             stdout=subprocess.DEVNULL,
@@ -99,13 +99,13 @@ class SeafileClient:
     def init_config(self):
         if self.config_initialized:
             return
-        cmd = "seaf-cli init -d %s" % self.app_dir
-        _lg.info("Initializing seafile config: %s", cmd)
+        cmd = ["seaf-cli", "init", "-d", self.app_dir]
+        _lg.info("Initializing seafile config: %s", " ".join(cmd))
         subprocess.run(self.__gen_cmd(cmd))
 
     def start_daemon(self):
-        cmd = "seaf-cli start"
-        _lg.info("Starting seafile daemon: %s", cmd)
+        cmd = ["seaf-cli", "start"]
+        _lg.info("Starting seafile daemon: %s", " ".join(cmd))
         subprocess.run(self.__gen_cmd(cmd))
         _lg.info("Waiting for seafile daemon to start")
 
@@ -117,8 +117,8 @@ class SeafileClient:
         _lg.info("Seafile daemon is ready")
 
     def stop_daemon(self):
-        cmd = "seaf-cli stop"
-        _lg.info("Stopping seafile daemon: %s", cmd)
+        cmd = ["seaf-cli", "stop"]
+        _lg.info("Stopping seafile daemon: %s", " ".join(cmd))
         subprocess.run(self.__gen_cmd(cmd))
         _lg.info("Waiting for seafile daemon to stop")
 
@@ -135,9 +135,12 @@ class SeafileClient:
                 return lib_id
         return None
 
-    def sync_lib(self, lib_id: str, parent_dir: str = const.DEFAULT_LIBS_DIR):
-        lib_name = self.remote_libraries[lib_id]
-        lib_dir = os.path.join(parent_dir, lib_name.replace(" ", "_"))
+    def sync_lib(self, lib_id: str, lib_dir: str):
+        """
+        Sync a library into an already resolved directory. The caller decides
+        the directory, see dsc.paths.plan_lib_dirs: the name comes from the
+        server and must not be turned into a path here.
+        """
         create_dir(lib_dir)
         cmd = [
             "seaf-cli",
@@ -146,13 +149,13 @@ class SeafileClient:
             "-s", self.url,
             "-d", lib_dir,
             "-u", self.user,
-            "-p", '"' + self.password + '"',
+            "-p", self.password,
         ]
         _lg.info(
-            "Syncing library %s: %s", lib_name,
+            "Syncing library %s into %s: %s", lib_id, lib_dir,
             " ".join(hide_password(cmd, self.password)),
         )
-        subprocess.run(self.__gen_cmd(" ".join(cmd)))
+        subprocess.run(self.__gen_cmd(cmd))
 
     def __print_tx_task(self, tx_task) -> str:
         """ Print transfer task status """
@@ -234,8 +237,8 @@ class SeafileClient:
                 prev_status[library] = cur_status[library]
 
     def get_local_libraries(self) -> set:
-        cmd = "seaf-cli list"
-        _lg.info("Listing local libraries: %s", cmd)
+        cmd = ["seaf-cli", "list"]
+        _lg.info("Listing local libraries: %s", " ".join(cmd))
         out = subprocess.check_output(self.__gen_cmd(cmd))
         out = out.decode().splitlines()[1:]  # first line is a header
 
@@ -256,8 +259,8 @@ class SeafileClient:
                 continue
 
             # check current value
-            cmd = f"seaf-cli config -k {key}"
-            _lg.info("Checking seafile client option: %s", cmd)
+            cmd = ["seaf-cli", "config", "-k", key]
+            _lg.info("Checking seafile client option: %s", " ".join(cmd))
             proc = subprocess.run(self.__gen_cmd(cmd), stdout=subprocess.PIPE)
             # stdout looks like "option = value"
             cur_value = proc.stdout.decode().strip()
@@ -269,8 +272,8 @@ class SeafileClient:
                 continue
 
             # set new value
-            cmd = f"seaf-cli config -k {key} -v {value}"
-            _lg.info("Setting seafile client option: %s", cmd)
+            cmd = ["seaf-cli", "config", "-k", key, "-v", str(value)]
+            _lg.info("Setting seafile client option: %s", " ".join(cmd))
             subprocess.run(self.__gen_cmd(cmd))
             need_restart = True
 

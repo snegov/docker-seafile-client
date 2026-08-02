@@ -37,15 +37,19 @@ Acceptance criteria:
 
 ### Remove shell and path injection risks
 
-- [ ] Pass subprocess arguments as arrays instead of joining values into shell
-  command strings in `dsc/client.py` and `dsc/misc.py`.
-- [ ] Replace `su -c` with a mechanism such as `runuser --` that does not need a
-  shell.
-- [ ] Treat server-provided library names as untrusted input.
-- [ ] Resolve every target directory and prove that it remains under
-  `/dsc/seafile` before creating or writing it.
-- [ ] Define how duplicate, absolute, empty, and traversal-style library names
-  are handled.
+- [x] Pass subprocess arguments as arrays instead of joining values into shell
+  command strings in `dsc/client.py` and `dsc/misc.py`. The password is no
+  longer wrapped in quotes to survive a shell, which also fixes passwords
+  containing quotes, `$`, and backticks.
+- [x] Replace `su -c` with a mechanism such as `runuser --` that does not need a
+  shell. `runuser -u` sets the same `HOME` and a `PATH` that still finds the
+  `seaf-cli` wrapper, so the daemon environment is unchanged.
+- [x] Treat server-provided library names as untrusted input.
+- [x] Resolve every target directory and prove that it remains under
+  `/dsc/seafile` before creating or writing it. Symlinks are resolved first,
+  so an existing symlink in the libraries directory cannot redirect a write.
+- [x] Define how duplicate, absolute, empty, and traversal-style library names
+  are handled. See `dsc/paths.py` and the "Some notes" section of the README.
 
 Acceptance criteria:
 
@@ -88,6 +92,8 @@ Acceptance criteria:
 
 - [ ] Check every important subprocess return code.
 - [ ] Add timeouts to daemon startup, shutdown, and readiness polling.
+  Confirmed: `start_daemon` and `stop_daemon` poll `while True` with no bound,
+  so a daemon that never changes state hangs the container silently.
 - [ ] Handle `SIGTERM` and `SIGINT` and stop the daemon in `finally`.
 - [ ] Return a nonzero container exit code on configuration or daemon failure.
 - [ ] Produce actionable errors instead of waiting forever.
@@ -101,13 +107,16 @@ Acceptance criteria:
 ### Add real tests
 
 - [ ] Add unit tests for configuration parsing, command construction, library
-  resolution, path validation, retries, and status parsing.
+  resolution, path validation, retries, and status parsing. Command
+  construction and path validation are covered in `tests/`; configuration
+  parsing, retries, and status parsing are not.
 - [ ] Add regression tests for externally reported password and deletion
   threshold issues.
 - [ ] Add a container smoke test for imports, installed CLI version, startup,
   and shutdown using controlled fakes.
-- [ ] Keep image construction as a separate CI job so packaging failures are
-  distinguishable from application failures.
+- [x] Keep image construction as a separate CI job so packaging failures are
+  distinguishable from application failures. The `unit-test` job does not
+  depend on the image build.
 
 Acceptance criteria:
 

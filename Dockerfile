@@ -29,9 +29,9 @@ RUN curl -fsSL -o /tmp/seaf-cli.AppImage "$SEAFILE_CLI_URL" && \
 RUN printf '%s\n' \
         '#!/bin/sh' \
         'APPDIR=/opt/seafile-cli' \
-        'export PATH="$APPDIR/usr/bin:$PATH"' \
-        'export LD_LIBRARY_PATH="$APPDIR/usr/lib:$LD_LIBRARY_PATH"' \
-        'export PYTHONPATH="$APPDIR/usr/lib/python3.9/site-packages:$PYTHONPATH"' \
+        'export PATH="$APPDIR/usr/bin${PATH:+:$PATH}"' \
+        'export LD_LIBRARY_PATH="$APPDIR/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"' \
+        'export PYTHONPATH="$APPDIR/usr/lib/python3.9/site-packages${PYTHONPATH:+:$PYTHONPATH}"' \
         'exec python3 "$APPDIR/usr/bin/seaf-cli" "$@"' \
         > /usr/local/bin/seaf-cli && \
     chmod +x /usr/local/bin/seaf-cli

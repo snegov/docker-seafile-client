@@ -11,11 +11,14 @@ exploit scenarios are discussed in public issues.
 
 ### Restore reproducible image builds
 
-- [ ] Replace the unavailable Seafile APT repository used in `Dockerfile`.
-- [ ] Install a supported Seafile CLI version from an official source.
-- [ ] Pin the version and verify its checksum or signature during the build.
-- [ ] Remove `apt-key`, which is deprecated and trusts keys globally.
-- [ ] Add a smoke check that `seaf-cli` runs to the image build. Note that
+- [x] Replace the unavailable Seafile APT repository used in `Dockerfile`.
+  Upstream discontinued it; the CLI now ships as an x86_64-only AppImage.
+- [x] Install a supported Seafile CLI version from an official source.
+- [x] Pin the version and verify its checksum during the build. The checksum is
+  trust-on-first-use: upstream publishes no digest or signature alongside the
+  AppImage, so this is weaker than the signed APT repository it replaces.
+- [x] Remove `apt-key`, which is deprecated and trusts keys globally.
+- [x] Add a smoke check that `seaf-cli` runs to the image build. Note that
   `seaf-cli` has no `--version` flag; use `seaf-cli --help` and assert the
   expected subcommands, and record the installed version from the package
   manager instead.

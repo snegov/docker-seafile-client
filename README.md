@@ -11,7 +11,7 @@ Also available as a ready-to-use [`compose.example.yaml`](compose.example.yaml).
 services:
   seafile-client:
     restart: always
-    image: snegov/seafile-client:0.0.9
+    image: snegov/seafile-client:0.0.13
     environment:
       LIBRARY_ID: "79867cbf-2944-488d-9105-852463ecdf9e:my_library"
       SERVER_HOST: seafile.example.com

@@ -3,7 +3,6 @@
 import argparse
 import logging
 import os
-import os.path
 import sys
 
 from dsc import SeafileClient, const

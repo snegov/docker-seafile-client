@@ -4,7 +4,6 @@ import os
 import subprocess
 import time
 from typing import Optional
-from urllib.parse import urlparse
 
 from cached_property import cached_property_with_ttl
 import requests

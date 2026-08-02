@@ -40,6 +40,21 @@ def create_dir(dir_path: str):
             raise RuntimeError(f"Data dir {dir_path} is not a directory")
 
 
+def user_cmd(argv: list) -> list:
+    """
+    Wrap a command so that it runs as the seafile user.
+
+    ``runuser --`` execs the command directly. ``su -c`` would hand it to a
+    login shell instead, which turns every server-provided value in the
+    command into shell code. Like ``su``, ``runuser`` sets HOME, USER and a
+    default PATH for the target user, so seaf-cli still finds its config and
+    its own wrapper.
+    """
+    if not isinstance(argv, list):
+        raise TypeError(f"Command must be a list of arguments, got {type(argv).__name__}")
+    return ["runuser", "-u", DEFAULT_USERNAME, "--"] + argv
+
+
 def hide_password(cmd: list, password: str) -> list:
     cmd = cmd.copy()
     for i, arg in enumerate(cmd):

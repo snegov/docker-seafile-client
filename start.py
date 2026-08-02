@@ -7,6 +7,7 @@ import sys
 
 from dsc import SeafileClient, const
 from dsc.misc import setup_uid, create_dir
+from dsc.paths import plan_lib_dirs
 
 _lg = logging.getLogger('dsc')
 
@@ -76,8 +77,14 @@ def main():
     else:
         libs_dir = const.DEFAULT_LIBS_DIR
 
-    for lib_id in libs_to_sync:
-        client.sync_lib(lib_id, libs_dir)
+    # Library names come from the server, so the directory for each one is
+    # resolved and checked before anything is created or written.
+    lib_dirs = plan_lib_dirs(
+        {lib_id: client.remote_libraries[lib_id] for lib_id in libs_to_sync},
+        libs_dir,
+    )
+    for lib_id, lib_dir in lib_dirs.items():
+        client.sync_lib(lib_id, lib_dir)
     client.watch_status()
 
     client.stop_daemon()

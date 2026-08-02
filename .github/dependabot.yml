@@ -1,0 +1,35 @@
+version: 2
+
+updates:
+  # Python runtime dependencies pinned in requirements.txt.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: pip
+
+  # Base image in the Dockerfile. The Seafile AppImage is fetched by URL and
+  # checksum, so Dependabot cannot track it; bump SEAFILE_CLI_VERSION and
+  # SEAFILE_CLI_SHA256 by hand.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+    commit-message:
+      prefix: docker
+
+  # Actions used by .github/workflows.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+    commit-message:
+      prefix: ci

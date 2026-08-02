@@ -23,12 +23,17 @@ exploit scenarios are discussed in public issues.
   expected subcommands, and record the installed version from the package
   manager instead.
 - [ ] Scan the resulting image and review every high or critical finding.
+- [ ] Establish a stronger trust anchor for the AppImage than a self-derived
+  checksum: an upstream digest or signature, or a verified artifact mirrored
+  somewhere we control.
 
 Acceptance criteria:
 
 - A clean `docker build --no-cache .` succeeds in CI.
 - The installed Seafile version is explicit and current.
-- A missing or invalid artifact signature fails the build.
+- An invalid artifact checksum fails the build. Upstream publishes no signature
+  for the AppImage, so signature verification is not achievable from this
+  source.
 
 ### Remove shell and path injection risks
 
@@ -180,7 +185,7 @@ Acceptance criteria:
 
 ### Improve the public project page
 
-- [ ] Link directly to the Docker Hub image near the top of `README.md`.
+- [x] Link directly to the Docker Hub image near the top of `README.md`.
 - [ ] Add CI, release, Docker pulls, and license badges after the checks are
   trustworthy.
 - [ ] Add a short architecture and process-lifecycle section.

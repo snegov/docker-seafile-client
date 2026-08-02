@@ -1,20 +1,53 @@
 FROM debian:bookworm-slim
 
-# Install seafile client
+# Seafile discontinued its APT repository; linux-clients.seafile.com no longer
+# resolves to a reachable host. Upstream now ships the CLI as an AppImage.
+ARG SEAFILE_CLI_VERSION=9.0.19
+ARG SEAFILE_CLI_SHA256=4af848362d8493be218b903e17e3fbbd282e9ea94af000211ce05c3f44e48715
+ARG SEAFILE_CLI_URL=https://sos-ch-dk-2.exo.io/seafile-downloads/Seafile-cli-x86_64-${SEAFILE_CLI_VERSION}.AppImage
+
 RUN apt-get update && \
-    apt-get install gnupg curl python3.11-venv -y && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates curl binutils squashfs-tools python3.11-venv && \
     rm -rf /var/lib/apt/lists/*
-RUN curl https://linux-clients.seafile.com/seafile.asc | apt-key add - && \
-    echo 'deb [arch=amd64] https://linux-clients.seafile.com/seafile-deb/bookworm/ stable main' \
-    > /etc/apt/sources.list.d/seafile.list && \
-    apt-get update -y && \
-    apt-get install -y seafile-cli && \
-    rm -rf /var/lib/apt/lists/*
+
+# An AppImage is an ELF runtime with a squashfs image appended. Unpack the
+# squashfs directly rather than executing the AppImage: running it needs FUSE,
+# and so a privileged container. Verify the download before unpacking it.
+RUN curl -fsSL -o /tmp/seaf-cli.AppImage "$SEAFILE_CLI_URL" && \
+    echo "${SEAFILE_CLI_SHA256}  /tmp/seaf-cli.AppImage" | sha256sum -c - && \
+    offset=$(LC_ALL=C readelf -h /tmp/seaf-cli.AppImage | awk '\
+        /Start of section headers/ {s=$5} \
+        /Size of section headers/  {z=$5} \
+        /Number of section headers/{n=$5} \
+        END {print s + z * n}') && \
+    unsquashfs -q -d /opt/seafile-cli -o "$offset" /tmp/seaf-cli.AppImage && \
+    rm /tmp/seaf-cli.AppImage
+
+# The bundled AppRun expects APPDIR, which only the AppImage runtime sets.
+# seaf-cli also requires seaf-daemon on PATH, so keep usr/bin ahead of it.
+RUN printf '%s\n' \
+        '#!/bin/sh' \
+        'APPDIR=/opt/seafile-cli' \
+        'export PATH="$APPDIR/usr/bin:$PATH"' \
+        'export LD_LIBRARY_PATH="$APPDIR/usr/lib:$LD_LIBRARY_PATH"' \
+        'export PYTHONPATH="$APPDIR/usr/lib/python3.9/site-packages:$PYTHONPATH"' \
+        'exec python3 "$APPDIR/usr/bin/seaf-cli" "$@"' \
+        > /usr/local/bin/seaf-cli && \
+    chmod +x /usr/local/bin/seaf-cli
 
 # Use virtual environment
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv --system-site-packages $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# The APT package used to install the seafile/pysearpc RPC bindings system-wide.
+# The AppImage keeps them in its own tree, so put them on the venv path: dsc
+# imports seafile directly, not only through seaf-cli. They are pure Python, so
+# the 3.9 build works unchanged on this interpreter.
+RUN python3 -c "import pathlib, site; \
+    pathlib.Path(site.getsitepackages()[0], 'seafile-appimage.pth') \
+        .write_text('/opt/seafile-cli/usr/lib/python3.9/site-packages\n')"
 
 # Install app requirements
 WORKDIR /dsc
@@ -31,6 +64,11 @@ RUN chmod +x /dsc/start.py && \
     usermod -G users seafile && \
     mkdir -p /dsc/seafile-data && \
     chown seafile:seafile -R /dsc
+
+# Smoke checks: seaf-cli has no --version flag, so assert its subcommands, and
+# confirm the app's own imports resolve.
+RUN seaf-cli --help | grep -q 'download-by-name' && \
+    python3 -c "import seafile, pysearpc, dsc.client, dsc.misc"
 
 VOLUME /dsc/seafile-data
 CMD ["./start.py"]

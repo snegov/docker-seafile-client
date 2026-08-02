@@ -147,12 +147,15 @@ Acceptance criteria:
 
 ### CI and release pipeline
 
-- [ ] Replace `actions/checkout@v2` and `docker/build-push-action@v1`.
-- [ ] Set workflow permissions explicitly to `contents: read` by default.
-- [ ] Use a scoped Docker Hub access token.
-- [ ] Build a release image once and attach all version and `latest` tags to
+- [x] Replace `actions/checkout@v2` and `docker/build-push-action@v1`.
+- [x] Set workflow permissions explicitly to `contents: read` by default.
+- [x] Use a scoped Docker Hub access token. The workflow now reads
+  `secrets.DOCKER_TOKEN`; the repository secret still has to be created from a
+  scoped Docker Hub token before the next tag is pushed.
+- [x] Build a release image once and attach all version and `latest` tags to
   the same manifest digest.
-- [ ] Add OCI labels, an SBOM, provenance, and image signing.
+- [x] Add OCI labels via `docker/metadata-action`.
+- [ ] Add an SBOM, provenance, and image signing.
 - [ ] Add dependency updates for Python, Docker, and GitHub Actions.
 - [ ] Run dependency and image scans on pull requests and on a schedule.
 

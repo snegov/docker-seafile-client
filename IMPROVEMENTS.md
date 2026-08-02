@@ -156,7 +156,10 @@ Acceptance criteria:
   the same manifest digest.
 - [x] Add OCI labels via `docker/metadata-action`.
 - [ ] Add an SBOM, provenance, and image signing.
-- [ ] Add dependency updates for Python, Docker, and GitHub Actions.
+- [x] Add dependency updates for Python, Docker, and GitHub Actions. A weekly
+  Dependabot configuration covers `requirements.txt`, the Dockerfile base
+  image, and the workflow actions. The Seafile AppImage is fetched by URL and
+  checksum, so it still has to be bumped by hand.
 - [ ] Run dependency and image scans on pull requests and on a schedule.
 
 Acceptance criteria:

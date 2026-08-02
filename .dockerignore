@@ -1,0 +1,9 @@
+# Only requirements.txt, dsc/ and start.py belong in the build context.
+*
+!requirements.txt
+!start.py
+!dsc/
+
+# Keep local artifacts out even though dsc/ is re-included above.
+dsc/**/__pycache__/
+dsc/**/*.py[cod]

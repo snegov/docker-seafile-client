@@ -171,10 +171,14 @@ Acceptance criteria:
 
 - [ ] Separate configuration, subprocess execution, library resolution, and
   status monitoring so each can be tested independently.
-- [ ] Remove unused imports and unnecessary dependencies.
+- [x] Remove unused imports and unnecessary dependencies. Both pinned
+  requirements are used; `urllib3` is imported directly but only pinned
+  transitively through `requests`.
 - [ ] Add type annotations and static checks at external-input boundaries.
 - [ ] Make logging configurable and avoid forced dependency debug logs.
-- [ ] Add `.dockerignore` and reduce unnecessary image packages.
+- [ ] Add `.dockerignore` and reduce unnecessary image packages. `.dockerignore`
+  is in place; `binutils` and `squashfs-tools` are still shipped in the final
+  image because the AppImage is unpacked in the same stage.
 
 ### Establish a visible maintenance process
 

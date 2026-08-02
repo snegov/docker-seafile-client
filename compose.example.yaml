@@ -1,0 +1,19 @@
+services:
+  seafile-client:
+    restart: always
+    image: snegov/seafile-client:0.0.9
+    environment:
+      LIBRARY_ID: "79867cbf-2944-488d-9105-852463ecdf9e:my_library"
+      SERVER_HOST: seafile.example.com
+      USERNAME: user
+      PASSWORD: password
+      SEAFILE_UID: 1000
+      SEAFILE_GID: 100
+    hostname: dsc
+    volumes:
+      - /home/johndow/seafile:/dsc/seafile
+      - sync-data:/dsc/seafile-data
+    container_name: seafile-client
+
+volumes:
+  sync-data:

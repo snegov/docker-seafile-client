@@ -1,19 +1,24 @@
 # docker-seafile-client
 Docker image for [Seafile CLI client](https://help.seafile.com/syncing_client/linux-cli/).
 
+Image on Docker Hub:
+ [snegov/seafile-client](https://hub.docker.com/r/snegov/seafile-client).
+
 ### Docker-compose example:
+Also available as a ready-to-use [`compose.example.yaml`](compose.example.yaml).
+
 ```yaml
 services:
   seafile-client:
     restart: always
-    image: snegov/seafile-client
+    image: snegov/seafile-client:0.0.9
     environment:
-      - LIBRARY_ID="79867cbf-2944-488d-9105-852463ecdf9e:my_library"
-      - SERVER_HOST=seafile.example.com
-      - USERNAME=user
-      - PASSWORD=password
-      - SEAFILE_UID=1000
-      - SEAFILE_GID=100
+      LIBRARY_ID: "79867cbf-2944-488d-9105-852463ecdf9e:my_library"
+      SERVER_HOST: seafile.example.com
+      USERNAME: user
+      PASSWORD: password
+      SEAFILE_UID: 1000
+      SEAFILE_GID: 100
     hostname: dsc
     volumes:
       - /home/johndow/seafile:/dsc/seafile

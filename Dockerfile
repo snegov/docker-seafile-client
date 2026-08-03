@@ -61,9 +61,10 @@ RUN pip install --no-cache-dir --upgrade "setuptools>=78.1.1" && \
 # Copy app
 COPY dsc ./dsc/
 COPY start.py ./start.py
+COPY healthcheck.py ./healthcheck.py
 
 # Create seafile user and init seafile client
-RUN chmod +x /dsc/start.py && \
+RUN chmod +x /dsc/start.py /dsc/healthcheck.py && \
     useradd -U -d /dsc -s /bin/bash seafile && \
     usermod -G users seafile && \
     mkdir -p /dsc/seafile-data && \
@@ -74,11 +75,19 @@ RUN chmod +x /dsc/start.py && \
 RUN seaf-cli --help | grep -q 'download-by-name' && \
     seaf-cli sync --help | grep -q '\--token' && \
     seaf-cli list --help | grep -q '\--json' && \
-    python3 -c "import seafile, pysearpc, dsc.client, dsc.misc"
+    python3 -c "import seafile, pysearpc, dsc.client, dsc.misc, healthcheck"
 
 # Record the pinned client version in the image so it can be checked at
 # runtime; seaf-cli itself has no --version flag.
 ENV SEAFILE_CLI_VERSION=${SEAFILE_CLI_VERSION}
 
 VOLUME /dsc/seafile-data
+
+# The container's own process already runs as the seafile user (see
+# dsc.misc.drop_privileges), but a HEALTHCHECK is a fresh process started by
+# the Docker daemon, which starts it as root. runuser drops it to the same
+# unprivileged user before it ever touches the RPC socket.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+    CMD runuser -u seafile -- python3 /dsc/healthcheck.py
+
 CMD ["./start.py"]

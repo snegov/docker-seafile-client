@@ -213,9 +213,9 @@ Acceptance criteria:
   image, and the workflow actions. The Seafile AppImage is fetched by URL and
   checksum, so it still has to be bumped by hand.
 - [ ] Run dependency and image scans on pull requests and on a schedule. The
-  `test` job now runs the Trivy image scan on every pull request and push
-  (see P0), which covers new code; a scheduled run to catch newly disclosed
-  CVEs against unchanged code is still missing.
+  `test` job now runs the Trivy image scan on every pull request and on every
+  push to `master` or a tag (see P0), which covers new code; a scheduled run
+  to catch newly disclosed CVEs against unchanged code is still missing.
 
 Acceptance criteria:
 

@@ -214,8 +214,14 @@ Acceptance criteria:
   Each check is a fresh root-spawned process (unlike the long-lived
   `start.py`), so it drops to the `seafile` user with `runuser` before
   touching the RPC socket - the one place that mechanism still belongs.
-- [ ] Handle temporary RPC failures and daemon restarts without corrupting
-  state.
+- [x] Handle temporary RPC failures and daemon restarts without corrupting
+  state. `watch_status()`'s per-iteration RPC read is now wrapped so an
+  unexpected failure (the daemon crashing or restarting mid-call) logs a
+  warning and retries on the next tick instead of crashing the container;
+  a stop signal or another `DscError` still ends the loop as before. Prior
+  state is left untouched across a failed read, so the next successful one
+  still reports every real change. Verified against the real image: the
+  container survives `seaf-daemon` being killed outright.
 - [ ] Document supported CPU architectures instead of implying multi-platform
   support.
 

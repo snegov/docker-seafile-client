@@ -165,6 +165,22 @@ class SeafileClient:
         self.__wait_for_daemon(False, const.DAEMON_STOP_TIMEOUT, "stopping")
         _lg.info("Seafile daemon is stopped")
 
+    def is_healthy(self) -> bool:
+        """
+        Report whether the daemon process and its RPC socket both respond.
+
+        Used by the container's HEALTHCHECK. Neither check needs the Seafile
+        server, so this works without a token or password.
+        """
+        if not self.daemon_ready:
+            return False
+        try:
+            self.rpc.get_repo_list(-1, -1)
+        except Exception as err:
+            _lg.warning("RPC endpoint is not responding: %s", err)
+            return False
+        return True
+
     def get_library_id(self, library) -> Optional[str]:
         """
         Resolve a requested name or ID to the one library ID it names.

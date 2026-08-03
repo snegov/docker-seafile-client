@@ -208,7 +208,12 @@ Acceptance criteria:
 - [x] Reject UID or GID zero unless a documented use case requires it.
   `main()` now exits with code 2 and a clear message if `--uid`/`SEAFILE_UID`
   or `--gid`/`SEAFILE_GID` resolve to 0, before `setup_uid()` ever runs.
-- [ ] Add a health check for the daemon and RPC endpoint.
+- [x] Add a health check for the daemon and RPC endpoint.
+  `SeafileClient.is_healthy()` checks `seaf-cli status` and a real RPC call
+  (`get_repo_list`); `healthcheck.py` exposes it to Docker's `HEALTHCHECK`.
+  Each check is a fresh root-spawned process (unlike the long-lived
+  `start.py`), so it drops to the `seafile` user with `runuser` before
+  touching the RPC socket - the one place that mechanism still belongs.
 - [ ] Handle temporary RPC failures and daemon restarts without corrupting
   state.
 - [ ] Document supported CPU architectures instead of implying multi-platform

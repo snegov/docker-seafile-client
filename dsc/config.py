@@ -8,6 +8,7 @@ that never equals the integer it is compared against.
 """
 
 import os
+from typing import Optional
 
 from dsc.errors import ConfigError
 
@@ -15,7 +16,7 @@ _TRUE_VALUES = {"true", "1", "yes", "on"}
 _FALSE_VALUES = {"false", "0", "no", "off"}
 
 
-def env_str(name: str, default: str = None) -> str:
+def env_str(name: str, default: Optional[str] = None) -> Optional[str]:
     """Return a text setting. An empty variable counts as unset."""
     value = os.getenv(name)
     if value is None or value == "":

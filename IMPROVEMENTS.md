@@ -199,7 +199,9 @@ Acceptance criteria:
   since it can't be invoked from an already non-root process anyway.
   Verified against the real image (not just mocked unit tests): a running
   container's PID 1 shows `Uid: 1000 1000 1000 1000` in `/proc/1/status`.
-- [ ] Reject UID or GID zero unless a documented use case requires it.
+- [x] Reject UID or GID zero unless a documented use case requires it.
+  `main()` now exits with code 2 and a clear message if `--uid`/`SEAFILE_UID`
+  or `--gid`/`SEAFILE_GID` resolve to 0, before `setup_uid()` ever runs.
 - [ ] Add a health check for the daemon and RPC endpoint.
 - [ ] Handle temporary RPC failures and daemon restarts without corrupting
   state.

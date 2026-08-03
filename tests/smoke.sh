@@ -139,6 +139,22 @@ else
     fail "negative limit not reported: $(echo "$out" | tail -1)"
 fi
 
+out=$(docker run --rm $PLATFORM_ARG -e SERVER_HOST=h -e USERNAME=u -e PASSWORD=p \
+    -e LIBRARY_ID=x -e SEAFILE_UID=0 "$IMAGE" 2>&1; echo "rc=$?")
+if echo "$out" | grep -q "uid must not be 0" && [ "$(echo "$out" | tail -1)" = "rc=2" ]; then
+    pass "SEAFILE_UID=0 is rejected"
+else
+    fail "SEAFILE_UID=0 not rejected: $out"
+fi
+
+out=$(docker run --rm $PLATFORM_ARG -e SERVER_HOST=h -e USERNAME=u -e PASSWORD=p \
+    -e LIBRARY_ID=x -e SEAFILE_GID=0 "$IMAGE" 2>&1; echo "rc=$?")
+if echo "$out" | grep -q "gid must not be 0" && [ "$(echo "$out" | tail -1)" = "rc=2" ]; then
+    pass "SEAFILE_GID=0 is rejected"
+else
+    fail "SEAFILE_GID=0 not rejected: $out"
+fi
+
 echo "== a mounted secret is read and stays out of the environment"
 printf 's3cret-from-file\n' > "$WORK/pw"
 out=$(docker run --rm $PLATFORM_ARG -v "$WORK/pw:/run/secrets/pw:ro" \

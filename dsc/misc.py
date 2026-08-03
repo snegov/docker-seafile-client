@@ -42,17 +42,36 @@ def create_dir(dir_path: str):
 
 def user_cmd(argv: list) -> list:
     """
-    Wrap a command so that it runs as the seafile user.
+    Return a command as-is, having already validated it is a plain argument
+    list and never a shell string.
 
-    ``runuser --`` execs the command directly. ``su -c`` would hand it to a
-    login shell instead, which turns every server-provided value in the
-    command into shell code. Like ``su``, ``runuser`` sets HOME, USER and a
-    default PATH for the target user, so seaf-cli still finds its config and
-    its own wrapper.
+    The process itself runs as the seafile user for its whole life after
+    drop_privileges() (see start.py), so subprocess calls no longer need to
+    be individually re-targeted with ``runuser``.
     """
     if not isinstance(argv, list):
         raise TypeError(f"Command must be a list of arguments, got {type(argv).__name__}")
-    return ["runuser", "-u", DEFAULT_USERNAME, "--"] + argv
+    return argv
+
+
+def drop_privileges(uid: int, gid: int):
+    """
+    Permanently switch the current process to the given UID/GID.
+
+    Must run after setup_uid()/create_dir(), which need root, and before any
+    other code, since everything from here on (the daemon, the RPC socket,
+    the sync loop) runs as this user for the rest of the process's life.
+    Order matters: supplementary groups and the GID must be set before the
+    UID is dropped, since giving up root removes the permission to change
+    them.
+    """
+    user_pwinfo = pwd.getpwnam(DEFAULT_USERNAME)
+    os.initgroups(DEFAULT_USERNAME, gid)
+    os.setgid(gid)
+    os.setuid(uid)
+    os.environ["HOME"] = user_pwinfo.pw_dir
+    os.environ["USER"] = DEFAULT_USERNAME
+    os.environ["LOGNAME"] = DEFAULT_USERNAME
 
 
 def hide_secrets(cmd: list, *secrets: str) -> list:

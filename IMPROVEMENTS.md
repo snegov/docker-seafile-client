@@ -189,7 +189,16 @@ Acceptance criteria:
 
 ### Runtime hardening
 
-- [ ] Run the long-lived process as the configured non-root user after setup.
+- [x] Run the long-lived process as the configured non-root user after setup.
+  `start.py` used to stay root for its whole life; only the individual
+  `seaf-cli`/`seaf-daemon` subprocess calls were unprivileged (via
+  `runuser`). Now `main()` drops privileges in-process
+  (`dsc.misc.drop_privileges`, using `os.initgroups`/`setgid`/`setuid`)
+  right after `setup_uid()`/`create_dir()`, and before `SeafileClient` or
+  the daemon/RPC/watch loop start. `runuser` is gone from `user_cmd()`
+  since it can't be invoked from an already non-root process anyway.
+  Verified against the real image (not just mocked unit tests): a running
+  container's PID 1 shows `Uid: 1000 1000 1000 1000` in `/proc/1/status`.
 - [ ] Reject UID or GID zero unless a documented use case requires it.
 - [ ] Add a health check for the daemon and RPC endpoint.
 - [ ] Handle temporary RPC failures and daemon restarts without corrupting

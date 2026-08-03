@@ -68,6 +68,8 @@ RUN chmod +x /dsc/start.py && \
 # Smoke checks: seaf-cli has no --version flag, so assert its subcommands, and
 # confirm the app's own imports resolve.
 RUN seaf-cli --help | grep -q 'download-by-name' && \
+    seaf-cli sync --help | grep -q '\--token' && \
+    seaf-cli list --help | grep -q '\--json' && \
     python3 -c "import seafile, pysearpc, dsc.client, dsc.misc"
 
 VOLUME /dsc/seafile-data

@@ -152,7 +152,10 @@ Acceptance criteria:
   server errors separately.
 - [ ] Make TLS configuration consistent between Python requests and Seafile.
 - [ ] Support a custom CA bundle; keep certificate disabling as a last resort.
-- [ ] Prefer structured JSON output from `seaf-cli` over parsing display text.
+- [x] Prefer structured JSON output from `seaf-cli` over parsing display text.
+  `seaf-cli list --json` is used instead of splitting the display columns,
+  which could not represent a library name or a path containing whitespace.
+  `list-remote` still uses the HTTP API rather than the CLI.
 - [ ] Reject ambiguous library names and an empty requested library set.
 
 ### Runtime hardening

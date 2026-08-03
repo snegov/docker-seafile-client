@@ -2,15 +2,15 @@
 
 import argparse
 import json
+import os
 import subprocess
 
 import pytest
 
 from dsc import client as client_module
-from dsc import const
 from dsc.errors import ConfigError, DaemonError
 from dsc.client import SeafileClient
-from dsc.misc import hide_secrets, user_cmd
+from dsc.misc import hide_secrets, user_cmd, drop_privileges
 
 # Values that would be interpreted by a shell if a command were ever joined
 # into a string and handed to ``su -c``.
@@ -56,9 +56,11 @@ def calls(monkeypatch):
     return recorded
 
 
-def test_user_cmd_uses_runuser_without_a_shell():
+def test_user_cmd_returns_the_command_unchanged():
+    # The process itself runs as the seafile user after drop_privileges(),
+    # so no per-call re-targeting is needed any more.
     argv = user_cmd(["seaf-cli", "status"])
-    assert argv == ["runuser", "-u", const.DEFAULT_USERNAME, "--", "seaf-cli", "status"]
+    assert argv == ["seaf-cli", "status"]
 
 
 def test_user_cmd_never_invokes_a_shell():
@@ -72,6 +74,39 @@ def test_user_cmd_never_invokes_a_shell():
 def test_user_cmd_rejects_a_string():
     with pytest.raises(TypeError):
         user_cmd("seaf-cli status")
+
+
+class FakePwInfo:
+    pw_dir = "/dsc"
+
+
+@pytest.fixture
+def fake_pwnam(monkeypatch):
+    monkeypatch.setattr("pwd.getpwnam", lambda name: FakePwInfo())
+
+
+def test_drop_privileges_sets_groups_before_gid_before_uid(monkeypatch, fake_pwnam):
+    """Order matters: root is needed for each step, and is gone after setuid."""
+    calls = []
+    monkeypatch.setattr("os.initgroups", lambda user, gid: calls.append(("initgroups", user, gid)))
+    monkeypatch.setattr("os.setgid", lambda gid: calls.append(("setgid", gid)))
+    monkeypatch.setattr("os.setuid", lambda uid: calls.append(("setuid", uid)))
+
+    drop_privileges(1000, 1000)
+
+    assert [c[0] for c in calls] == ["initgroups", "setgid", "setuid"]
+
+
+def test_drop_privileges_sets_the_target_environment(monkeypatch, fake_pwnam):
+    monkeypatch.setattr("os.initgroups", lambda user, gid: None)
+    monkeypatch.setattr("os.setgid", lambda gid: None)
+    monkeypatch.setattr("os.setuid", lambda uid: None)
+
+    drop_privileges(1000, 1000)
+
+    assert os.environ["USER"] == "seafile"
+    assert os.environ["LOGNAME"] == "seafile"
+    assert os.environ["HOME"]
 
 
 @pytest.mark.parametrize("secret", SHELL_METACHARACTERS)
@@ -154,7 +189,7 @@ def test_configure_passes_option_values_as_arguments(client, calls, monkeypatch)
     client.configure(args, check_for_daemon=False)
 
     argvs = [argv for argv, _ in calls]
-    prefix = ["runuser", "-u", const.DEFAULT_USERNAME, "--", "seaf-cli", "config"]
+    prefix = ["seaf-cli", "config"]
     assert prefix + ["-k", "upload_limit"] in argvs
     assert prefix + ["-k", "upload_limit", "-v", "100"] in argvs
     # An option that seaf-cli does not know about is never forwarded.

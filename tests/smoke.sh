@@ -150,6 +150,18 @@ print(secret, 'PASSWORD' in os.environ)" 2>&1 | tail -1)
 check "secret file read, password absent from the environment" \
     "s3cret-from-file False" "$out"
 
+echo "== the process drops root after setup and reaches the target uid/gid"
+out=$(run "$IMAGE" python3 -c "
+import os
+from dsc.misc import setup_uid, create_dir, drop_privileges
+from dsc import const
+setup_uid(1000, 1000)
+create_dir(const.DEFAULT_APP_DIR)
+drop_privileges(1000, 1000)
+print(os.getuid(), os.getgid(), os.environ['USER'])" 2>&1 | tail -1)
+check "process runs as the target non-root user after drop_privileges" \
+    "1000 1000 seafile" "$out"
+
 echo "== a default container gets the documented defaults"
 out=$(run "$IMAGE" python3 -c "
 import start

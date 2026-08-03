@@ -9,7 +9,7 @@ import sys
 from dsc import SeafileClient, const
 from dsc.config import env_bool, env_int, env_str
 from dsc.errors import ConfigError, DscError, GracefulShutdown
-from dsc.misc import setup_uid, create_dir
+from dsc.misc import setup_uid, create_dir, drop_privileges
 from dsc.paths import plan_lib_dirs
 from dsc.secrets import resolve_secret
 
@@ -148,6 +148,7 @@ def main():
 
     setup_uid(args.uid, args.gid)
     create_dir(const.DEFAULT_APP_DIR)
+    drop_privileges(args.uid, args.gid)
 
     client = SeafileClient(args.server, args.username, password,
                            const.DEFAULT_APP_DIR, token=token)

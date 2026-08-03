@@ -7,6 +7,7 @@ import signal
 import sys
 
 from dsc import SeafileClient, const
+from dsc.config import env_bool, env_int, env_str
 from dsc.errors import ConfigError, DscError, GracefulShutdown
 from dsc.misc import setup_uid, create_dir
 from dsc.paths import plan_lib_dirs
@@ -24,6 +25,30 @@ def handle_signal(signum, frame):
 def install_signal_handlers():
     for signum in (signal.SIGTERM, signal.SIGINT):
         signal.signal(signum, handle_signal)
+
+
+def defaults_from_env() -> dict:
+    """
+    Read every setting from the environment with its documented default.
+
+    Reading these directly leaves an unset variable as None, which reaches
+    seaf-cli as the string "None" and silently replaces the documented value.
+    """
+    return dict(
+        server=env_str("SERVER_HOST"),
+        username=env_str("USERNAME"),
+        password=env_str("PASSWORD"),
+        password_file=env_str("PASSWORD_FILE"),
+        token=env_str("TOKEN"),
+        token_file=env_str("TOKEN_FILE"),
+        libraries=env_str("LIBRARY_ID"),
+        uid=env_int("SEAFILE_UID", 1000),
+        gid=env_int("SEAFILE_GID", 1000),
+        upload_limit=env_int("UPLOAD_LIMIT", 0),
+        download_limit=env_int("DOWNLOAD_LIMIT", 0),
+        delete_confirm_threshold=env_int("DELETE_CONFIRM_THRESHOLD", 500),
+        disable_verify_certificate=env_bool("DISABLE_VERIFY_CERTIFICATE", False),
+    )
 
 
 def resolve_libraries(client, requested: str, server: str) -> set:
@@ -94,21 +119,11 @@ def main():
     parser.add_argument("--disable-verify-certificate", action="store_true")
     parser.add_argument("--delete-confirm-threshold", type=int, default=500)
 
-    parser.set_defaults(
-        server=os.getenv("SERVER_HOST"),
-        username=os.getenv("USERNAME"),
-        password=os.getenv("PASSWORD"),
-        password_file=os.getenv("PASSWORD_FILE"),
-        token=os.getenv("TOKEN"),
-        token_file=os.getenv("TOKEN_FILE"),
-        libraries=os.getenv("LIBRARY_ID"),
-        uid=os.getenv("SEAFILE_UID", default=1000),
-        gid=os.getenv("SEAFILE_GID", default=1000),
-        upload_limit=os.getenv("UPLOAD_LIMIT"),
-        download_limit=os.getenv("DOWNLOAD_LIMIT"),
-        disable_verify_certificate=os.getenv("DISABLE_VERIFY_CERTIFICATE") in ("true", "1", "True"),
-        delete_confirm_threshold=os.getenv("DELETE_CONFIRM_THRESHOLD"),
-    )
+    try:
+        parser.set_defaults(**defaults_from_env())
+    except ConfigError as err:
+        _lg.error("%s", err)
+        return 2
     args = parser.parse_args()
     if not args.server:
         parser.error("Seafile server is not specified")

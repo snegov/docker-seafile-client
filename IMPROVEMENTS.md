@@ -134,10 +134,12 @@ Acceptance criteria:
   parsing, retries, and status parsing are not.
 - [ ] Add regression tests for externally reported password and deletion
   threshold issues.
-- [ ] Add a container smoke test for imports, installed CLI version, startup,
-  and shutdown using controlled fakes. Graceful shutdown was verified by hand
-  in the built image (`docker stop` returns immediately with exit code 0
-  instead of being killed after 10 seconds); it is not yet automated in CI.
+- [x] Add a container smoke test for imports, installed CLI version, startup,
+  and shutdown using controlled fakes. See `tests/smoke.sh`, run by the image
+  build job. It exercises the real `seaf-cli` and `seaf-daemon`, which the unit
+  tests cannot: the runner is x86_64, matching the AppImage. The pinned client
+  version is exposed as `SEAFILE_CLI_VERSION` in the image so it can be
+  asserted at runtime.
 - [x] Keep image construction as a separate CI job so packaging failures are
   distinguishable from application failures. The `unit-test` job does not
   depend on the image build.
@@ -160,7 +162,11 @@ Acceptance criteria:
 ### Networking and protocol behavior
 
 - [ ] Add explicit connect and read timeouts to all HTTP requests.
-- [ ] Define a bounded retry budget with backoff and jitter.
+- [ ] Define a bounded retry budget with backoff and jitter. Measured: the
+  current `Retry(total=30, backoff_factor=2, backoff_max=60)` with no request
+  timeout waits about 26 minutes on a single unreachable server before giving
+  up, which is indistinguishable from a hang. Observed while writing the smoke
+  test, when a probe pointed at an unroutable host.
 - [ ] Handle authentication, rate limits, malformed responses, and retryable
   server errors separately.
 - [ ] Make TLS configuration consistent between Python requests and Seafile.

@@ -101,6 +101,10 @@ def test_drop_privileges_sets_the_target_environment(monkeypatch, fake_pwnam):
     monkeypatch.setattr("os.initgroups", lambda user, gid: None)
     monkeypatch.setattr("os.setgid", lambda gid: None)
     monkeypatch.setattr("os.setuid", lambda uid: None)
+    # drop_privileges() writes os.environ directly, not through monkeypatch,
+    # so register the keys with monkeypatch first to have it restore them.
+    for key in ("HOME", "USER", "LOGNAME"):
+        monkeypatch.delenv(key, raising=False)
 
     drop_privileges(1000, 1000)
 

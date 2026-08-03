@@ -17,5 +17,9 @@ class DaemonTimeout(DscError):
     """The daemon did not reach the expected state in time."""
 
 
+class NetworkError(DscError):
+    """A request to the Seafile server failed or exceeded its timeout."""
+
+
 class GracefulShutdown(DscError):
     """SIGTERM or SIGINT was received; stop the daemon and exit cleanly."""

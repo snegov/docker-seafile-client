@@ -47,7 +47,10 @@ volumes:
  confirmation before being deleted simultaneously. Default value is _500_.
  - `DISABLE_VERIFY_CERTIFICATE` - set to _true_ to disable server's certificate
  verification. Default value is _false_. Booleans accept _true_/_false_,
- _1_/_0_, _yes_/_no_ and _on_/_off_, in any case.
+ _1_/_0_, _yes_/_no_ and _on_/_off_, in any case. Note that this setting had no
+ effect in released images up to and including 0.0.13: the value reached the
+ Seafile daemon capitalised, which it does not recognise, so verification
+ stayed on even when the variable was set. The default was never affected.
  - `UPLOAD_LIMIT` / `DOWNLOAD_LIMIT` -  upload/download speed limit in B/s
  (bytes per second). Default values are _0_ (unlimited).
 

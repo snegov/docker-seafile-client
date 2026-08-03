@@ -131,6 +131,12 @@ def main():
         parser.error("username is not specified")
     if not args.libraries:
         parser.error("library is not specified")
+    if args.uid == 0:
+        parser.error("uid must not be 0; running the daemon as root defeats "
+                      "the point of --uid/SEAFILE_UID")
+    if args.gid == 0:
+        parser.error("gid must not be 0 (the root group); running the daemon "
+                      "with it defeats the point of --gid/SEAFILE_GID")
 
     try:
         password = resolve_secret("PASSWORD", args.password, args.password_file)

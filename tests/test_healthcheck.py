@@ -36,5 +36,5 @@ def test_rpc_is_not_checked_when_the_daemon_is_already_down(client, monkeypatch)
     monkeypatch.setattr(type(client), "daemon_ready", False)
     called = []
     monkeypatch.setattr(client.rpc, "get_repo_list", lambda a, b: called.append(1))
-    client.is_healthy()
+    assert client.is_healthy() is False
     assert not called

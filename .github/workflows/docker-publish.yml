@@ -52,6 +52,11 @@ jobs:
           load: true
           tags: ${{ env.IMAGE }}:ci
 
+      # Exercises the real seaf-cli and seaf-daemon in the built image, which
+      # the unit tests cannot do. The runner is x86_64, matching the AppImage.
+      - name: Container smoke test
+        run: tests/smoke.sh ${{ env.IMAGE }}:ci
+
   push:
     needs: [unit-test, test]
 

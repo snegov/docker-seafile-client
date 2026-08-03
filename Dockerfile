@@ -72,5 +72,9 @@ RUN seaf-cli --help | grep -q 'download-by-name' && \
     seaf-cli list --help | grep -q '\--json' && \
     python3 -c "import seafile, pysearpc, dsc.client, dsc.misc"
 
+# Record the pinned client version in the image so it can be checked at
+# runtime; seaf-cli itself has no --version flag.
+ENV SEAFILE_CLI_VERSION=${SEAFILE_CLI_VERSION}
+
 VOLUME /dsc/seafile-data
 CMD ["./start.py"]

@@ -53,8 +53,14 @@ def defaults_from_env() -> dict:
 
 def resolve_libraries(client, requested: str, server: str) -> set:
     """Map the requested names or IDs to library IDs that are not synced yet."""
+    requested_names = requested.split(sep=":")
+    if any(name == "" for name in requested_names):
+        raise ConfigError(
+            f"library set must not contain an empty entry, got {requested!r}"
+        )
+
     libs_to_sync = set()
-    for arg_lib in requested.split(sep=":"):
+    for arg_lib in requested_names:
         lib_id = client.get_library_id(arg_lib)
         if lib_id:
             libs_to_sync.add(lib_id)

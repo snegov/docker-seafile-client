@@ -185,7 +185,13 @@ Acceptance criteria:
   `seaf-cli list --json` is used instead of splitting the display columns,
   which could not represent a library name or a path containing whitespace.
   `list-remote` still uses the HTTP API rather than the CLI.
-- [ ] Reject ambiguous library names and an empty requested library set.
+- [x] Reject ambiguous library names and an empty requested library set.
+  `get_library_id` used to silently return the first library matching a
+  requested name, even if two libraries shared it; it now raises
+  `ConfigError` when a name matches more than one library ID.
+  `resolve_libraries` rejects an empty entry from `LIBRARY_ID` (an empty
+  string, or one produced by `"a::b"`/a leading or trailing `:`) the same
+  way. See `tests/test_libraries.py`.
 
 ### Runtime hardening
 

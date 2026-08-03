@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import os
 import subprocess
@@ -271,16 +272,27 @@ class SeafileClient:
                 prev_status[library] = cur_status[library]
 
     def get_local_libraries(self) -> set:
-        cmd = ["seaf-cli", "list"]
+        # The display output is whitespace separated, so a library name or a
+        # path containing a space cannot be parsed back apart. Ask for JSON.
+        cmd = ["seaf-cli", "list", "--json"]
         _lg.info("Listing local libraries: %s", " ".join(cmd))
-        out = subprocess.check_output(self.__gen_cmd(cmd))
-        out = out.decode().splitlines()[1:]  # first line is a header
+        out = self.__run(cmd, stdout=subprocess.PIPE).stdout
 
-        local_libs = set()
-        for line in out:
-            lib_name, lib_id, lib_path = line.rsplit(maxsplit=3)
-            local_libs.add(lib_id)
-        return local_libs
+        try:
+            libraries = json.loads(out.decode())
+        except (UnicodeDecodeError, ValueError) as err:
+            raise DaemonError(
+                f"Cannot read the library list from seaf-cli: {err}"
+            ) from err
+
+        # Valid JSON is not necessarily the expected shape, and an unexpected
+        # one must fail the same way rather than as a bare TypeError.
+        try:
+            return {lib["id"] for lib in libraries}
+        except (KeyError, TypeError) as err:
+            raise DaemonError(
+                f"Unexpected library list from seaf-cli: {err}"
+            ) from err
 
     def configure(self, args: argparse.Namespace, check_for_daemon: bool = True):
         need_restart = False

@@ -1,12 +1,14 @@
 """Every subprocess must be an argument list, never a shell string."""
 
 import argparse
+import json
 import subprocess
 
 import pytest
 
 from dsc import client as client_module
 from dsc import const
+from dsc.errors import DaemonError
 from dsc.client import SeafileClient
 from dsc.misc import hide_secrets, user_cmd
 
@@ -157,3 +159,79 @@ def test_configure_passes_option_values_as_arguments(client, calls, monkeypatch)
     assert prefix + ["-k", "upload_limit", "-v", "100"] in argvs
     # An option that seaf-cli does not know about is never forwarded.
     assert not any("ignored" in argv for argv in argvs)
+
+
+def run_returning(monkeypatch, stdout=b"", returncode=0):
+    """Run seaf-cli commands that produce the given output."""
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, returncode, stdout=stdout)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    return calls
+
+
+def test_local_libraries_are_read_as_json(client, monkeypatch):
+    out = json.dumps([
+        {"name": "Docs", "id": "id-1", "path": "/dsc/seafile/Docs"},
+    ]).encode()
+    calls = run_returning(monkeypatch, out)
+
+    assert client.get_local_libraries() == {"id-1"}
+    assert "--json" in calls[-1]
+
+
+@pytest.mark.parametrize("name, path", [
+    # Display output is whitespace separated, so these used to be unparseable.
+    ("My Docs", "/dsc/seafile/My_Docs"),
+    ("Docs", "/mnt/my libraries/Docs"),
+    ("My Docs", "/mnt/my libraries/My Docs"),
+    ("Ünïcödé ☂", "/dsc/seafile/Ünïcödé_☂"),
+    ("tab\tname", "/dsc/seafile/tab_name"),
+])
+def test_local_libraries_survive_whitespace_in_names_and_paths(client, monkeypatch, name, path):
+    out = json.dumps([{"name": name, "id": "id-1", "path": path}]).encode()
+    run_returning(monkeypatch, out)
+
+    assert client.get_local_libraries() == {"id-1"}
+
+
+def test_no_local_libraries_gives_an_empty_set(client, monkeypatch):
+    run_returning(monkeypatch, b"[]")
+    assert client.get_local_libraries() == set()
+
+
+def test_local_libraries_reports_unreadable_output(client, monkeypatch):
+    run_returning(monkeypatch, b"not json at all")
+    with pytest.raises(DaemonError):
+        client.get_local_libraries()
+
+
+def test_local_libraries_reports_a_failed_command(client, monkeypatch):
+    run_returning(monkeypatch, b"", returncode=1)
+    with pytest.raises(DaemonError):
+        client.get_local_libraries()
+
+
+@pytest.mark.parametrize("payload", [
+    b'{"name": "Docs"}',            # an object where a list is expected
+    b'[{"name": "Docs"}]',          # an entry with no id
+    b'["Docs"]',                    # entries that are not objects
+    b'[null]',
+    b'null',
+    b'42',
+])
+def test_local_libraries_reports_unexpected_json_shapes(client, monkeypatch, payload):
+    """Valid JSON of the wrong shape must not escape as a raw TypeError."""
+    run_returning(monkeypatch, payload)
+    with pytest.raises(DaemonError):
+        client.get_local_libraries()
+
+
+def test_local_libraries_error_keeps_the_original_cause(client, monkeypatch):
+    run_returning(monkeypatch, b"not json at all")
+    with pytest.raises(DaemonError) as err:
+        client.get_local_libraries()
+    assert err.value.__cause__ is not None

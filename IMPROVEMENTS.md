@@ -185,7 +185,13 @@ Acceptance criteria:
   `seaf-cli list --json` is used instead of splitting the display columns,
   which could not represent a library name or a path containing whitespace.
   `list-remote` still uses the HTTP API rather than the CLI.
-- [ ] Reject ambiguous library names and an empty requested library set.
+- [x] Reject ambiguous library names and an empty requested library set.
+  `get_library_id` used to silently return the first library matching a
+  requested name, even if two libraries shared it; it now raises
+  `ConfigError` when a name matches more than one library ID.
+  `resolve_libraries` rejects an empty entry from `LIBRARY_ID` (an empty
+  string, or one produced by `"a::b"`/a leading or trailing `:`) the same
+  way. See `tests/test_libraries.py`.
 
 ### Runtime hardening
 
@@ -202,7 +208,12 @@ Acceptance criteria:
 - [x] Reject UID or GID zero unless a documented use case requires it.
   `main()` now exits with code 2 and a clear message if `--uid`/`SEAFILE_UID`
   or `--gid`/`SEAFILE_GID` resolve to 0, before `setup_uid()` ever runs.
-- [ ] Add a health check for the daemon and RPC endpoint.
+- [x] Add a health check for the daemon and RPC endpoint.
+  `SeafileClient.is_healthy()` checks `seaf-cli status` and a real RPC call
+  (`get_repo_list`); `healthcheck.py` exposes it to Docker's `HEALTHCHECK`.
+  Each check is a fresh root-spawned process (unlike the long-lived
+  `start.py`), so it drops to the `seafile` user with `runuser` before
+  touching the RPC socket - the one place that mechanism still belongs.
 - [x] Handle temporary RPC failures and daemon restarts without corrupting
   state. `watch_status()`'s per-iteration RPC read is now wrapped so an
   unexpected failure (the daemon crashing or restarting mid-call) logs a

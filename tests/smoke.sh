@@ -134,7 +134,8 @@ c.watch_status()  # the real thing, not a stub: this is what is under test
 
 started=0
 for _ in $(seq 1 30); do
-    if docker logs dsc-smoke 2>&1 | grep -q "Seafile daemon is ready"; then started=1; break; fi
+    logs=$(docker logs dsc-smoke 2>&1)
+    if printf '%s' "$logs" | grep -q "Seafile daemon is ready"; then started=1; break; fi
     sleep 1
 done
 
@@ -147,11 +148,9 @@ else
             [ "$(cat "$p/comm" 2>/dev/null)" = "seaf-daemon" ] && kill -9 "${p#/proc/}"
         done' >/dev/null 2>&1
     recovered=0
-    for _ in $(seq 1 15); do
-        if docker logs dsc-smoke 2>&1 | grep -q "Could not read sync status"; then
-            recovered=1
-            break
-        fi
+    for _ in $(seq 1 30); do
+        logs=$(docker logs dsc-smoke 2>&1)
+        if printf '%s' "$logs" | grep -q "Could not read sync status"; then recovered=1; break; fi
         sleep 1
     done
     if [ "$recovered" -eq 1 ] && [ "$(docker inspect -f '{{.State.Running}}' dsc-smoke)" = "true" ]; then
@@ -160,6 +159,43 @@ else
         fail "the container did not survive a killed daemon"
         docker logs dsc-smoke 2>&1 | sed 's/^/        /' | tail -20
     fi
+fi
+docker rm -f dsc-smoke >/dev/null
+
+echo "== the HEALTHCHECK command through the real entrypoint"
+# Runs through main(), unlike the fixture above: HOME/UID/GID come from the
+# same drop_privileges() path a real deployment uses, so .ccnet ends up
+# under /dsc like it does in production, not under root's home directory.
+docker rm -f dsc-smoke >/dev/null 2>&1 || true
+docker run -d $PLATFORM_ARG --name dsc-smoke \
+    -e SERVER_HOST=example.invalid -e USERNAME=u -e PASSWORD=p -e LIBRARY_ID=x \
+    "$IMAGE" >/dev/null
+
+ready=0
+for _ in $(seq 1 30); do
+    logs=$(docker logs dsc-smoke 2>&1)
+    if printf '%s' "$logs" | grep -q "Seafile daemon is ready"; then ready=1; break; fi
+    sleep 1
+done
+
+if [ "$ready" -eq 0 ]; then
+    fail "the daemon never became ready, HEALTHCHECK not measured"
+else
+    if docker exec dsc-smoke runuser -u seafile -- python3 /dsc/healthcheck.py; then
+        pass "HEALTHCHECK command exits 0 while the daemon is up"
+    else
+        fail "HEALTHCHECK command did not exit 0 while the daemon was up"
+    fi
+fi
+docker rm -f dsc-smoke >/dev/null
+
+echo "== the HEALTHCHECK command reports unhealthy when the daemon is down"
+docker rm -f dsc-smoke >/dev/null 2>&1 || true
+docker run -d $PLATFORM_ARG --name dsc-smoke "$IMAGE" sleep 60 >/dev/null
+if docker exec dsc-smoke runuser -u seafile -- python3 /dsc/healthcheck.py; then
+    fail "HEALTHCHECK command exited 0 with no daemon running"
+else
+    pass "HEALTHCHECK command exits nonzero with no daemon running"
 fi
 docker rm -f dsc-smoke >/dev/null
 

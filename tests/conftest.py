@@ -9,6 +9,8 @@ import sys
 import types
 from unittest import mock
 
+import pytest
+
 
 def _install_seafile_stub():
     if "seafile" in sys.modules:
@@ -19,3 +21,19 @@ def _install_seafile_stub():
 
 
 _install_seafile_stub()
+
+
+@pytest.fixture(autouse=True)
+def no_network(monkeypatch):
+    """
+    Fail loudly instead of reaching the network.
+
+    The client retries failed requests with backoff, so a test that
+    accidentally makes a real request appears to hang rather than fail.
+    """
+    import requests
+
+    def blocked(self, method, url, *args, **kwargs):
+        raise AssertionError(f"Test attempted a real request: {method} {url}")
+
+    monkeypatch.setattr(requests.Session, "request", blocked)

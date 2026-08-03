@@ -13,7 +13,7 @@ from urllib3.util.retry import Retry
 import seafile
 
 from dsc import const
-from dsc.errors import ConfigError, DaemonError, DaemonTimeout, NetworkError
+from dsc.errors import ConfigError, DaemonError, DaemonTimeout, DscError, NetworkError
 from dsc.misc import config_value, create_dir, hide_secrets, user_cmd
 
 _lg = logging.getLogger(__name__)
@@ -274,7 +274,20 @@ class SeafileClient:
         fmt = "Library {:%ds} {}" % max_name_len
         while True:
             time.sleep(const.STATUS_POLL_PERIOD)
-            cur_status = self.get_status()
+            try:
+                cur_status = self.get_status()
+            except DscError:
+                # A stop signal or another DscError must still end the loop;
+                # only an unexpected RPC failure below is worth retrying.
+                raise
+            except Exception as err:
+                # The daemon can restart under us; a status read caught mid
+                # restart must not take the whole process down with it.
+                # prev_status is left untouched, so the next successful read
+                # still reports every real change since it, not just since
+                # this failure.
+                _lg.warning("Could not read sync status, retrying: %s", err)
+                continue
             for library, state in cur_status.items():
                 if state != prev_status.get(library):
                     if 30 > len(library) > max_name_len:

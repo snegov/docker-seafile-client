@@ -203,8 +203,14 @@ Acceptance criteria:
   `main()` now exits with code 2 and a clear message if `--uid`/`SEAFILE_UID`
   or `--gid`/`SEAFILE_GID` resolve to 0, before `setup_uid()` ever runs.
 - [ ] Add a health check for the daemon and RPC endpoint.
-- [ ] Handle temporary RPC failures and daemon restarts without corrupting
-  state.
+- [x] Handle temporary RPC failures and daemon restarts without corrupting
+  state. `watch_status()`'s per-iteration RPC read is now wrapped so an
+  unexpected failure (the daemon crashing or restarting mid-call) logs a
+  warning and retries on the next tick instead of crashing the container;
+  a stop signal or another `DscError` still ends the loop as before. Prior
+  state is left untouched across a failed read, so the next successful one
+  still reports every real change. Verified against the real image: the
+  container survives `seaf-daemon` being killed outright.
 - [ ] Document supported CPU architectures instead of implying multi-platform
   support.
 

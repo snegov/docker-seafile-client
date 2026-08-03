@@ -119,6 +119,50 @@ else
 fi
 docker rm -f dsc-smoke >/dev/null
 
+echo "== a killed daemon does not crash the watch loop"
+docker rm -f dsc-smoke >/dev/null 2>&1 || true
+docker run -d $PLATFORM_ARG --name dsc-smoke "$IMAGE" python3 -c "
+import logging
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+from dsc.client import SeafileClient
+
+c = SeafileClient('example.invalid', 'u', 'pw', '/dsc', token='tok')
+c.init_config()
+c.start_daemon()
+c.watch_status()  # the real thing, not a stub: this is what is under test
+" >/dev/null
+
+started=0
+for _ in $(seq 1 30); do
+    if docker logs dsc-smoke 2>&1 | grep -q "Seafile daemon is ready"; then started=1; break; fi
+    sleep 1
+done
+
+if [ "$started" -eq 0 ]; then
+    fail "the daemon never became ready, kill scenario not measured"
+else
+    # No procps in the image, so find the PID by hand instead of pkill.
+    docker exec dsc-smoke sh -c '
+        for p in /proc/[0-9]*; do
+            [ "$(cat "$p/comm" 2>/dev/null)" = "seaf-daemon" ] && kill -9 "${p#/proc/}"
+        done' >/dev/null 2>&1
+    recovered=0
+    for _ in $(seq 1 15); do
+        if docker logs dsc-smoke 2>&1 | grep -q "Could not read sync status"; then
+            recovered=1
+            break
+        fi
+        sleep 1
+    done
+    if [ "$recovered" -eq 1 ] && [ "$(docker inspect -f '{{.State.Running}}' dsc-smoke)" = "true" ]; then
+        pass "the watch loop logged the failure and kept the container running"
+    else
+        fail "the container did not survive a killed daemon"
+        docker logs dsc-smoke 2>&1 | sed 's/^/        /' | tail -20
+    fi
+fi
+docker rm -f dsc-smoke >/dev/null
+
 echo "== configuration errors stop the container with a useful message"
 out=$(docker run --rm $PLATFORM_ARG -e SERVER_HOST=h -e USERNAME=u -e LIBRARY_ID=x "$IMAGE" 2>&1; echo "rc=$?")
 check "no credentials exits 2" "rc=2" "$(echo "$out" | tail -1)"

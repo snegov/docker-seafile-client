@@ -14,7 +14,7 @@ import seafile
 
 from dsc import const
 from dsc.errors import ConfigError, DaemonError, DaemonTimeout
-from dsc.misc import create_dir, hide_secrets, user_cmd
+from dsc.misc import config_value, create_dir, hide_secrets, user_cmd
 
 _lg = logging.getLogger(__name__)
 
@@ -304,6 +304,9 @@ class SeafileClient:
             if key not in const.AVAILABLE_SEAFCLI_OPTIONS:
                 continue
 
+            if value is None:
+                raise ConfigError(f"No value for seafile option {key}")
+
             # check current value
             cmd = ["seaf-cli", "config", "-k", key]
             _lg.info("Checking seafile client option: %s", " ".join(cmd))
@@ -314,11 +317,11 @@ class SeafileClient:
                 cur_value = cur_value.split(sep="=")[1].strip()
             except IndexError:
                 cur_value = None
-            if cur_value == str(value):
+            if cur_value == config_value(value):
                 continue
 
             # set new value
-            cmd = ["seaf-cli", "config", "-k", key, "-v", str(value)]
+            cmd = ["seaf-cli", "config", "-k", key, "-v", config_value(value)]
             _lg.info("Setting seafile client option: %s", " ".join(cmd))
             self.__run(cmd)
             need_restart = True

@@ -46,9 +46,14 @@ volumes:
  - `DELETE_CONFIRM_THRESHOLD` - represents the number of files that require
  confirmation before being deleted simultaneously. Default value is _500_.
  - `DISABLE_VERIFY_CERTIFICATE` - set to _true_ to disable server's certificate
- verification. Default value is _false_.
+ verification. Default value is _false_. Booleans accept _true_/_false_,
+ _1_/_0_, _yes_/_no_ and _on_/_off_, in any case.
  - `UPLOAD_LIMIT` / `DOWNLOAD_LIMIT` -  upload/download speed limit in B/s
  (bytes per second). Default values are _0_ (unlimited).
+
+Numeric variables must be whole, non-negative numbers. A malformed or negative
+ value stops the container at startup with a message naming the variable,
+ rather than being passed on to the Seafile client.
 
 ### Using Docker secrets:
 Mount the secret and point `PASSWORD_FILE` at it, so the password never enters

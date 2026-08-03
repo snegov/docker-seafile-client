@@ -84,12 +84,19 @@ Acceptance criteria:
 
 ### Correct environment parsing and defaults
 
-- [ ] Replace direct `os.getenv()` assignments in `start.py` with typed parsers.
-- [ ] Preserve the documented defaults for upload limit, download limit, and
-  delete-confirm threshold when variables are absent.
-- [ ] Validate UID, GID, limits, threshold, and booleans before daemon startup.
-- [ ] Reject negative and malformed numeric values with useful messages.
-- [ ] Do not pass `None` as a Seafile configuration value.
+- [x] Replace direct `os.getenv()` assignments in `start.py` with typed parsers.
+  See `dsc/config.py` and `defaults_from_env()`.
+- [x] Preserve the documented defaults for upload limit, download limit, and
+  delete-confirm threshold when variables are absent. They were not: an unset
+  variable overwrote the argparse default with `None`, so a default container
+  sent the literal string `None` for all three.
+- [x] Validate UID, GID, limits, threshold, and booleans before daemon startup.
+  UID and GID are now integers; as strings they never equalled the integers
+  they were compared against, so `usermod` ran on every start.
+- [x] Reject negative and malformed numeric values with useful messages.
+- [x] Do not pass `None` as a Seafile configuration value. Booleans are also
+  rendered as `true`/`false` rather than Python's `True`/`False`, since the
+  daemon reads that setting with its boolean accessor.
 
 Acceptance criteria:
 

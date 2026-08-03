@@ -8,7 +8,7 @@ import pytest
 
 from dsc import client as client_module
 from dsc import const
-from dsc.errors import DaemonError
+from dsc.errors import ConfigError, DaemonError
 from dsc.client import SeafileClient
 from dsc.misc import hide_secrets, user_cmd
 
@@ -235,3 +235,33 @@ def test_local_libraries_error_keeps_the_original_cause(client, monkeypatch):
     with pytest.raises(DaemonError) as err:
         client.get_local_libraries()
     assert err.value.__cause__ is not None
+
+
+def test_configure_never_sends_none_as_a_value(client, calls):
+    """A None here reaches seaf-cli as the literal string "None"."""
+    with pytest.raises(ConfigError):
+        client.configure(argparse.Namespace(upload_limit=None), check_for_daemon=False)
+
+    for argv, _ in calls:
+        assert "None" not in argv
+
+
+@pytest.mark.parametrize("value, expected", [
+    (True, "true"),
+    (False, "false"),
+    (0, "0"),
+    (500, "500"),
+])
+def test_configure_renders_values_the_way_seaf_cli_stores_them(
+        client, calls, monkeypatch, value, expected):
+    # Changing an option restarts the daemon; keep this on the value only.
+    monkeypatch.setattr(client, "stop_daemon", lambda: None)
+    monkeypatch.setattr(client, "start_daemon", lambda: None)
+
+    client.configure(argparse.Namespace(disable_verify_certificate=value)
+                     if isinstance(value, bool)
+                     else argparse.Namespace(upload_limit=value),
+                     check_for_daemon=False)
+
+    setting = [argv for argv, _ in calls if "-v" in argv][-1]
+    assert setting[setting.index("-v") + 1] == expected

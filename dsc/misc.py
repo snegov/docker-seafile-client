@@ -65,3 +65,15 @@ def hide_secrets(cmd: list, *secrets: str) -> list:
             if secret in arg:
                 cmd[i] = arg.replace(secret, "********")
     return cmd
+
+
+def config_value(value) -> str:
+    """
+    Render a setting the way seaf-cli stores it.
+
+    Booleans are written as "true" and "false": the daemon reads this setting
+    with its boolean accessor, and Python's str() would produce "True".
+    """
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)

@@ -52,7 +52,11 @@ RUN python3 -c "import pathlib, site; \
 # Install app requirements
 WORKDIR /dsc
 COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+# venv creation bootstraps its own setuptools via ensurepip, which
+# requirements.txt does not cover. 66.1.1 carries CVE-2024-6345 and
+# CVE-2025-47273; 78.1.1 fixes both.
+RUN pip install --no-cache-dir --upgrade "setuptools>=78.1.1" && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy app
 COPY dsc ./dsc/

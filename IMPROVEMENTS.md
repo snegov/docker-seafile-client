@@ -22,7 +22,12 @@ exploit scenarios are discussed in public issues.
   `seaf-cli` has no `--version` flag; use `seaf-cli --help` and assert the
   expected subcommands, and record the installed version from the package
   manager instead.
-- [ ] Scan the resulting image and review every high or critical finding.
+- [x] Scan the resulting image and review every high or critical finding. Of
+  67 HIGH/CRITICAL findings (`trivy image`), 65 are in `debian:bookworm-slim`
+  packages with no upstream fix yet; the CI scan uses `--ignore-unfixed` so it
+  fails only on findings this repo can act on. The other 2, both `setuptools`
+  (bundled by `ensurepip` in the venv, not from `requirements.txt`), had
+  fixes and are resolved: see `Dockerfile`.
 - [ ] Establish a stronger trust anchor for the AppImage than a self-derived
   checksum: an upstream digest or signature, or a verified artifact mirrored
   somewhere we control.
@@ -207,7 +212,10 @@ Acceptance criteria:
   Dependabot configuration covers `requirements.txt`, the Dockerfile base
   image, and the workflow actions. The Seafile AppImage is fetched by URL and
   checksum, so it still has to be bumped by hand.
-- [ ] Run dependency and image scans on pull requests and on a schedule.
+- [ ] Run dependency and image scans on pull requests and on a schedule. The
+  `test` job now runs the Trivy image scan on every pull request and push
+  (see P0), which covers new code; a scheduled run to catch newly disclosed
+  CVEs against unchanged code is still missing.
 
 Acceptance criteria:
 

@@ -36,6 +36,11 @@ volumes:
  If you're using non-standard port, you can specify it here,
  eg: _seafile.example.com:8080_.
  - `USERNAME` / `PASSWORD` - credentials to access Seafile server.
+ - `PASSWORD_FILE` - path to a file holding the password, for Docker Compose
+ and Swarm secrets. Use either `PASSWORD` or `PASSWORD_FILE`, never both.
+ - `TOKEN` / `TOKEN_FILE` - an API token to authenticate with instead of a
+ password. A token takes precedence over a password and can be revoked on the
+ server. Use either `TOKEN` or `TOKEN_FILE`, never both.
  - `SEAFILE_UID` / `SEAFILE_GID` - UID/GID of user inside container. You can
  use it to set permissions on synced files. Default values are _1000_ / _1000_.
  - `DELETE_CONFIRM_THRESHOLD` - represents the number of files that require
@@ -44,6 +49,32 @@ volumes:
  verification. Default value is _false_.
  - `UPLOAD_LIMIT` / `DOWNLOAD_LIMIT` -  upload/download speed limit in B/s
  (bytes per second). Default values are _0_ (unlimited).
+
+### Using Docker secrets:
+Mount the secret and point `PASSWORD_FILE` at it, so the password never enters
+ the environment:
+
+```yaml
+services:
+  seafile-client:
+    environment:
+      PASSWORD_FILE: /run/secrets/seafile_password
+    secrets:
+      - seafile_password
+
+secrets:
+  seafile_password:
+    file: ./seafile_password.txt
+```
+
+A trailing newline in the file is ignored; everything else, including
+ surrounding spaces, is part of the secret.
+
+The client authenticates `seaf-cli` with an API token rather than the account
+ password, so the password never appears in a command line. The token does
+ appear there, and command lines are visible to any process in the container.
+ This is a limitation of `seaf-cli`, which accepts credentials only as
+ arguments. A token can at least be revoked on the server.
 
 ### Volumes:
  - `/dsc/seafile-data`  Seafile client data directory (sync status, etc).

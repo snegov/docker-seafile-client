@@ -12,8 +12,8 @@ from urllib3.util.retry import Retry
 import seafile
 
 from dsc import const
-from dsc.errors import DaemonError, DaemonTimeout
-from dsc.misc import create_dir, hide_password, user_cmd
+from dsc.errors import ConfigError, DaemonError, DaemonTimeout
+from dsc.misc import create_dir, hide_secrets, user_cmd
 
 _lg = logging.getLogger(__name__)
 
@@ -22,13 +22,16 @@ class SeafileClient:
     def __init__(self,
                  host: str,
                  user: str,
-                 passwd: str,
-                 app_dir: str = const.DEFAULT_APP_DIR):
+                 passwd: str = None,
+                 app_dir: str = const.DEFAULT_APP_DIR,
+                 token: str = None):
         self.user = user
         self.password = passwd
         self.app_dir = os.path.abspath(app_dir)
         self.rpc = seafile.RpcClient(os.path.join(self.app_dir, 'seafile-data', 'seafile.sock'))
-        self.__token = None
+        # A token supplied by the operator is used as is; otherwise one is
+        # fetched from the server with the password.
+        self.__token = token
 
         # determine server URL (assume HTTPS unless explicitly specified)
         if host.startswith('http://') or host.startswith('https://'):
@@ -86,6 +89,8 @@ class SeafileClient:
     @property
     def token(self):
         if self.__token is None:
+            if not self.password:
+                raise ConfigError("No password or token available to authenticate")
             url = f"{self.url}/api2/auth-token/"
             _lg.info("Fetching token: %s", url)
             r = self.session.post(url, data={"username": self.user, "password": self.password})
@@ -170,11 +175,14 @@ class SeafileClient:
             "-s", self.url,
             "-d", lib_dir,
             "-u", self.user,
-            "-p", self.password,
+            # The token, not the password: seaf-cli ignores the password when a
+            # token is given, and command arguments are visible to any process
+            # in the container. A token can also be revoked on the server.
+            "-T", self.token,
         ]
         _lg.info(
             "Syncing library %s into %s: %s", lib_id, lib_dir,
-            " ".join(hide_password(cmd, self.password)),
+            " ".join(hide_secrets(cmd, self.token, self.password)),
         )
         proc = self.__run(cmd, check=False)
         if proc.returncode != 0:

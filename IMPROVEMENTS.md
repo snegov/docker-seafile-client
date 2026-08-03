@@ -60,13 +60,21 @@ Acceptance criteria:
 
 ### Support secrets safely
 
-- [ ] Implement `PASSWORD_FILE` for Docker Compose and Swarm secrets.
-- [ ] Add token-based authentication and `TOKEN_FILE` if supported by the
-  installed Seafile CLI.
-- [ ] Define precedence and reject conflicting secret sources.
-- [ ] Ensure secrets are absent from application logs.
-- [ ] Document any upstream limitation that exposes a secret in process
-  arguments.
+- [x] Implement `PASSWORD_FILE` for Docker Compose and Swarm secrets. Only a
+  trailing newline is stripped, so a secret keeps any surrounding spaces.
+- [x] Add token-based authentication and `TOKEN_FILE` if supported by the
+  installed Seafile CLI. It is: `seaf-cli sync` takes `-T`, and ignores the
+  password when a token is given.
+- [x] Define precedence and reject conflicting secret sources. Two sources for
+  one secret (`PASSWORD` with `PASSWORD_FILE`) are rejected; a token takes
+  precedence over a password, as it does in `seaf-cli` itself.
+- [x] Ensure secrets are absent from application logs. Both the password and
+  the token are masked before a command is logged.
+- [x] Document any upstream limitation that exposes a secret in process
+  arguments. `seaf-cli` accepts credentials only as arguments, so a secret is
+  visible to any process in the container. The account password no longer goes
+  there: the client authenticates with an API token, which can be revoked.
+  See the README.
 
 Acceptance criteria:
 

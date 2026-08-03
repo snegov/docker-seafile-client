@@ -8,7 +8,7 @@ import pytest
 from dsc import client as client_module
 from dsc import const
 from dsc.client import SeafileClient
-from dsc.misc import hide_password, user_cmd
+from dsc.misc import hide_secrets, user_cmd
 
 # Values that would be interpreted by a shell if a command were ever joined
 # into a string and handed to ``su -c``.
@@ -34,6 +34,7 @@ def client():
         user="user@example",
         passwd="s3cret",
         app_dir="/dsc",
+        token="tok-en",
     )
 
 
@@ -71,13 +72,21 @@ def test_user_cmd_rejects_a_string():
         user_cmd("seaf-cli status")
 
 
-@pytest.mark.parametrize("password", SHELL_METACHARACTERS)
-def test_sync_passes_password_as_one_unquoted_argument(client, calls, password):
-    client.password = password
+@pytest.mark.parametrize("secret", SHELL_METACHARACTERS)
+def test_sync_passes_the_token_as_one_unquoted_argument(client, calls, secret):
+    client._SeafileClient__token = secret
     client.sync_lib("lib-id", "/dsc/seafile/Docs")
 
     argv, _ = calls[-1]
-    assert argv[argv.index("-p") + 1] == password
+    assert argv[argv.index("-T") + 1] == secret
+
+
+def test_sync_authenticates_with_the_token_not_the_password(client, calls):
+    client.sync_lib("lib-id", "/dsc/seafile/Docs")
+
+    argv, _ = calls[-1]
+    assert "-p" not in argv, "the account password must never reach argv"
+    assert client.password not in argv
 
 
 @pytest.mark.parametrize("lib_dir", [
@@ -102,23 +111,34 @@ def test_sync_command_is_a_list_of_strings(client, calls):
     assert kwargs.get("shell") is not True
 
 
-@pytest.mark.parametrize("password", SHELL_METACHARACTERS)
-def test_sync_never_logs_the_password(client, calls, caplog, password):
-    client.password = password
+@pytest.mark.parametrize("secret", SHELL_METACHARACTERS)
+def test_sync_never_logs_the_token_or_the_password(client, calls, caplog, secret):
+    client._SeafileClient__token = secret
+    client.password = secret + "-pw"
     with caplog.at_level("INFO"):
         client.sync_lib("lib-id", "/dsc/seafile/Docs")
 
-    assert password not in caplog.text
+    assert secret not in caplog.text
+    assert client.password not in caplog.text
 
 
-def test_hide_password_masks_every_occurrence():
-    masked = hide_password(["-p", "secret", "-u", "secret-user"], "secret")
+def test_hide_secrets_masks_every_occurrence():
+    masked = hide_secrets(["-p", "secret", "-u", "secret-user"], "secret")
     assert masked == ["-p", "********", "-u", "********-user"]
 
 
-def test_hide_password_does_not_mutate_the_original():
+def test_hide_secrets_masks_several_secrets():
+    masked = hide_secrets(["-p", "pw", "-T", "tok"], "pw", "tok")
+    assert masked == ["-p", "********", "-T", "********"]
+
+
+def test_hide_secrets_ignores_secrets_that_are_not_set():
+    assert hide_secrets(["-T", "tok"], None, "tok") == ["-T", "********"]
+
+
+def test_hide_secrets_does_not_mutate_the_original():
     argv = ["-p", "secret"]
-    hide_password(argv, "secret")
+    hide_secrets(argv, "secret")
     assert argv == ["-p", "secret"]
 
 

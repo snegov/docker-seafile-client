@@ -7,9 +7,10 @@ import signal
 import sys
 
 from dsc import SeafileClient, const
-from dsc.errors import DscError, GracefulShutdown
+from dsc.errors import ConfigError, DscError, GracefulShutdown
 from dsc.misc import setup_uid, create_dir
 from dsc.paths import plan_lib_dirs
+from dsc.secrets import resolve_secret
 
 _lg = logging.getLogger('dsc')
 
@@ -82,6 +83,9 @@ def main():
     parser.add_argument("-s", "--server")
     parser.add_argument("-u", "--username")
     parser.add_argument("-p", "--password")
+    parser.add_argument("--password-file")
+    parser.add_argument("-T", "--token")
+    parser.add_argument("--token-file")
     parser.add_argument("-l", "--libraries")
     parser.add_argument("--uid", type=int)
     parser.add_argument("--gid", type=int)
@@ -94,6 +98,9 @@ def main():
         server=os.getenv("SERVER_HOST"),
         username=os.getenv("USERNAME"),
         password=os.getenv("PASSWORD"),
+        password_file=os.getenv("PASSWORD_FILE"),
+        token=os.getenv("TOKEN"),
+        token_file=os.getenv("TOKEN_FILE"),
         libraries=os.getenv("LIBRARY_ID"),
         uid=os.getenv("SEAFILE_UID", default=1000),
         gid=os.getenv("SEAFILE_GID", default=1000),
@@ -107,17 +114,28 @@ def main():
         parser.error("Seafile server is not specified")
     if not args.username:
         parser.error("username is not specified")
-    if not args.password:
-        parser.error("password is not specified")
     if not args.libraries:
         parser.error("library is not specified")
+
+    try:
+        password = resolve_secret("PASSWORD", args.password, args.password_file)
+        token = resolve_secret("TOKEN", args.token, args.token_file)
+    except ConfigError as err:
+        _lg.error("%s", err)
+        return 2
+    if not password and not token:
+        parser.error("neither a password nor a token is specified")
+    if password and token:
+        # seaf-cli behaves the same way: a token makes the password unused.
+        _lg.info("Both a password and a token are configured; using the token")
 
     install_signal_handlers()
 
     setup_uid(args.uid, args.gid)
     create_dir(const.DEFAULT_APP_DIR)
 
-    client = SeafileClient(args.server, args.username, args.password, const.DEFAULT_APP_DIR)
+    client = SeafileClient(args.server, args.username, password,
+                           const.DEFAULT_APP_DIR, token=token)
 
     # check for deprecated /data directory
     if os.path.isdir(const.DEPRECATED_LIBS_DIR):

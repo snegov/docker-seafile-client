@@ -25,7 +25,9 @@ def fast_polling(monkeypatch):
 @pytest.fixture
 def client(monkeypatch):
     monkeypatch.setattr(client_module, "create_dir", lambda path: None)
-    return SeafileClient("seafile.example", "user", "pw", "/dsc")
+    # A token keeps the tests off the network: without one, authentication
+    # would be attempted against the server before syncing.
+    return SeafileClient("seafile.example", "user", "pw", "/dsc", token="tok-en")
 
 
 def fake_runner(returncodes, monkeypatch, stdout=b""):

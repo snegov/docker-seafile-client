@@ -55,9 +55,13 @@ def user_cmd(argv: list) -> list:
     return ["runuser", "-u", DEFAULT_USERNAME, "--"] + argv
 
 
-def hide_password(cmd: list, password: str) -> list:
+def hide_secrets(cmd: list, *secrets: str) -> list:
+    """Mask every given secret in a command before it is logged."""
     cmd = cmd.copy()
-    for i, arg in enumerate(cmd):
-        if password in arg:
-            cmd[i] = arg.replace(password, "********")
+    for secret in secrets:
+        if not secret:
+            continue
+        for i, arg in enumerate(cmd):
+            if secret in arg:
+                cmd[i] = arg.replace(secret, "********")
     return cmd

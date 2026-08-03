@@ -90,13 +90,14 @@ Acceptance criteria:
 
 ### Make startup and shutdown deterministic
 
-- [ ] Check every important subprocess return code.
-- [ ] Add timeouts to daemon startup, shutdown, and readiness polling.
-  Confirmed: `start_daemon` and `stop_daemon` poll `while True` with no bound,
-  so a daemon that never changes state hangs the container silently.
-- [ ] Handle `SIGTERM` and `SIGINT` and stop the daemon in `finally`.
-- [ ] Return a nonzero container exit code on configuration or daemon failure.
-- [ ] Produce actionable errors instead of waiting forever.
+- [x] Check every important subprocess return code. A failed `seaf-cli sync` is
+  reported per library and does not stop the remaining ones.
+- [x] Add timeouts to daemon startup, shutdown, and readiness polling. See
+  `DAEMON_START_TIMEOUT` and `DAEMON_STOP_TIMEOUT` in `dsc/const.py`; the stop
+  timeout is deliberately below the 10 second `docker stop` grace period.
+- [x] Handle `SIGTERM` and `SIGINT` and stop the daemon in `finally`.
+- [x] Return a nonzero container exit code on configuration or daemon failure.
+- [x] Produce actionable errors instead of waiting forever.
 
 Acceptance criteria:
 
@@ -113,7 +114,9 @@ Acceptance criteria:
 - [ ] Add regression tests for externally reported password and deletion
   threshold issues.
 - [ ] Add a container smoke test for imports, installed CLI version, startup,
-  and shutdown using controlled fakes.
+  and shutdown using controlled fakes. Graceful shutdown was verified by hand
+  in the built image (`docker stop` returns immediately with exit code 0
+  instead of being killed after 10 seconds); it is not yet automated in CI.
 - [x] Keep image construction as a separate CI job so packaging failures are
   distinguishable from application failures. The `unit-test` job does not
   depend on the image build.

@@ -42,6 +42,13 @@ def test_fetching_a_token_wraps_a_network_failure(client):
             _ = client.token
 
 
+def test_fetching_a_token_reports_url_and_status_on_an_error_response(client):
+    with mock.patch.object(client.session, "post") as post:
+        post.return_value = mock.Mock(status_code=403, text="Forbidden")
+        with pytest.raises(NetworkError, match="auth-token.*403.*Forbidden"):
+            _ = client.token
+
+
 def test_listing_remote_libraries_passes_a_request_timeout(client, monkeypatch):
     monkeypatch.setattr(type(client), "token", "tok")
     with mock.patch.object(client.session, "get") as get:
@@ -55,4 +62,12 @@ def test_listing_remote_libraries_wraps_a_network_failure(client, monkeypatch):
     monkeypatch.setattr(type(client), "token", "tok")
     with mock.patch.object(client.session, "get", side_effect=requests.exceptions.ConnectionError):
         with pytest.raises(NetworkError):
+            _ = client.remote_libraries
+
+
+def test_listing_remote_libraries_reports_url_and_status_on_an_error_response(client, monkeypatch):
+    monkeypatch.setattr(type(client), "token", "tok")
+    with mock.patch.object(client.session, "get") as get:
+        get.return_value = mock.Mock(status_code=500, text="Internal Server Error")
+        with pytest.raises(NetworkError, match="api2/repos.*500.*Internal Server Error"):
             _ = client.remote_libraries

@@ -103,7 +103,9 @@ class SeafileClient:
             except requests.exceptions.RequestException as err:
                 raise NetworkError(f"Can't reach {url}: {err}") from err
             if r.status_code != 200:
-                raise NetworkError(f"Can't get token: {r.text}")
+                raise NetworkError(
+                    f"Can't get token from {url}: HTTP {r.status_code}: {r.text}"
+                )
             self.__token = r.json()["token"]
         return self.__token
 
@@ -117,7 +119,7 @@ class SeafileClient:
         except requests.exceptions.RequestException as err:
             raise NetworkError(f"Can't reach {url}: {err}") from err
         if r.status_code != 200:
-            raise NetworkError(r.text)
+            raise NetworkError(f"Can't fetch {url}: HTTP {r.status_code}: {r.text}")
         r_libs = {lib["id"]: lib["name"] for lib in r.json()}
         return r_libs
 

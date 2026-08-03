@@ -281,9 +281,18 @@ class SeafileClient:
         try:
             libraries = json.loads(out.decode())
         except (UnicodeDecodeError, ValueError) as err:
-            raise DaemonError(f"Cannot read the library list from seaf-cli: {err}")
+            raise DaemonError(
+                f"Cannot read the library list from seaf-cli: {err}"
+            ) from err
 
-        return {lib["id"] for lib in libraries}
+        # Valid JSON is not necessarily the expected shape, and an unexpected
+        # one must fail the same way rather than as a bare TypeError.
+        try:
+            return {lib["id"] for lib in libraries}
+        except (KeyError, TypeError) as err:
+            raise DaemonError(
+                f"Unexpected library list from seaf-cli: {err}"
+            ) from err
 
     def configure(self, args: argparse.Namespace, check_for_daemon: bool = True):
         need_restart = False

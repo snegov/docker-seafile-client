@@ -213,3 +213,25 @@ def test_local_libraries_reports_a_failed_command(client, monkeypatch):
     run_returning(monkeypatch, b"", returncode=1)
     with pytest.raises(DaemonError):
         client.get_local_libraries()
+
+
+@pytest.mark.parametrize("payload", [
+    b'{"name": "Docs"}',            # an object where a list is expected
+    b'[{"name": "Docs"}]',          # an entry with no id
+    b'["Docs"]',                    # entries that are not objects
+    b'[null]',
+    b'null',
+    b'42',
+])
+def test_local_libraries_reports_unexpected_json_shapes(client, monkeypatch, payload):
+    """Valid JSON of the wrong shape must not escape as a raw TypeError."""
+    run_returning(monkeypatch, payload)
+    with pytest.raises(DaemonError):
+        client.get_local_libraries()
+
+
+def test_local_libraries_error_keeps_the_original_cause(client, monkeypatch):
+    run_returning(monkeypatch, b"not json at all")
+    with pytest.raises(DaemonError) as err:
+        client.get_local_libraries()
+    assert err.value.__cause__ is not None

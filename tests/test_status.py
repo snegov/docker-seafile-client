@@ -42,7 +42,10 @@ def test_watch_status_still_propagates_a_stop_signal(client, monkeypatch):
 
 
 def test_watch_status_keeps_prior_state_across_a_failed_read(client, monkeypatch, caplog):
-    """A failed read is logged and skipped; it must not corrupt prior state."""
+    """
+    A failed read is logged and skipped; it must not corrupt prior state,
+    so a real change right after the failure is still detected and logged.
+    """
     calls = []
 
     def flaky_get_status():
@@ -51,13 +54,17 @@ def test_watch_status_keeps_prior_state_across_a_failed_read(client, monkeypatch
             return {"Docs": "syncing"}
         if len(calls) == 2:
             raise ConnectionError("daemon restarting")
+        if len(calls) == 3:
+            return {"Docs": "done"}
         raise GracefulShutdown("SIGTERM")
 
     monkeypatch.setattr(client, "get_status", flaky_get_status)
 
-    with caplog.at_level("WARNING"):
+    with caplog.at_level("INFO"):
         with pytest.raises(GracefulShutdown):
             client.watch_status()
 
     assert "Could not read sync status" in caplog.text
-    assert len(calls) == 3
+    assert "syncing" in caplog.text
+    assert "done" in caplog.text
+    assert len(calls) == 4

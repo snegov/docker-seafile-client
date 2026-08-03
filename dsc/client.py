@@ -286,7 +286,8 @@ class SeafileClient:
                 # prev_status is left untouched, so the next successful read
                 # still reports every real change since it, not just since
                 # this failure.
-                _lg.warning("Could not read sync status, retrying: %s", err)
+                _lg.warning("Could not read sync status, retrying: %s", err,
+                            exc_info=err)
                 continue
             for library, state in cur_status.items():
                 if state != prev_status.get(library):

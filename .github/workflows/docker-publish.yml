@@ -62,7 +62,7 @@ jobs:
       # findings nothing in this repo can act on. A fixable HIGH/CRITICAL
       # finding still fails the build.
       - name: Scan image for vulnerabilities
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.IMAGE }}:ci
           severity: HIGH,CRITICAL

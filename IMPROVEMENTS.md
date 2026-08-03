@@ -212,10 +212,12 @@ Acceptance criteria:
   Dependabot configuration covers `requirements.txt`, the Dockerfile base
   image, and the workflow actions. The Seafile AppImage is fetched by URL and
   checksum, so it still has to be bumped by hand.
-- [ ] Run dependency and image scans on pull requests and on a schedule. The
-  `test` job now runs the Trivy image scan on every pull request and on every
-  push to `master` or a tag (see P0), which covers new code; a scheduled run
-  to catch newly disclosed CVEs against unchanged code is still missing.
+- [x] Run dependency and image scans on pull requests and on a schedule. The
+  `test` job runs the Trivy image scan on every pull request, on every push
+  to `master` or a tag, and now weekly (`schedule: cron '0 6 * * 1'`,
+  matching Dependabot's cadence) to catch newly disclosed CVEs against
+  unchanged code. Dependency updates themselves are Dependabot's job; see
+  "CI and release pipeline" above.
 
 Acceptance criteria:
 

@@ -57,6 +57,18 @@ jobs:
       - name: Container smoke test
         run: tests/smoke.sh ${{ env.IMAGE }}:ci
 
+      # ignore-unfixed: the debian:bookworm-slim base carries CVEs with no
+      # upstream fix yet; failing on those would block every build on
+      # findings nothing in this repo can act on. A fixable HIGH/CRITICAL
+      # finding still fails the build.
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
   push:
     needs: [unit-test, test]
 

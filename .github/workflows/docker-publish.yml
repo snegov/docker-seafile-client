@@ -9,6 +9,11 @@ on:
 
   pull_request:
 
+  # Catch newly disclosed CVEs against unchanged code; matches Dependabot's
+  # weekly cadence in .github/dependabot.yml.
+  schedule:
+    - cron: '0 6 * * 1'
+
 permissions:
   contents: read
 

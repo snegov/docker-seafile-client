@@ -169,16 +169,17 @@ class SeafileClient:
         """
         Resolve a requested name or ID to the one library ID it names.
 
-        Library IDs are unique, but two libraries can share a name; matching
-        more than one library silently picking the first would sync
-        whichever happened to come first in the server's response.
+        Library IDs are unique, but two libraries can share a name. Silently
+        matching more than one and picking the first would sync whichever
+        happened to come first in the server's response, not necessarily the
+        one requested.
         """
         matches = [lib_id for lib_id, lib_name in self.remote_libraries.items()
                    if library in (lib_id, lib_name)]
         if len(matches) > 1:
             raise ConfigError(
-                f"Library name {library!r} matches {len(matches)} libraries on "
-                "the server; use the library ID instead"
+                f"{library!r} matches {len(matches)} libraries on the server; "
+                "use the library ID instead"
             )
         return matches[0] if matches else None
 

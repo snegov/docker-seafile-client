@@ -12,6 +12,7 @@ from urllib3.util.retry import Retry
 import seafile
 
 from dsc import const
+from dsc.errors import DaemonError, DaemonTimeout
 from dsc.misc import create_dir, hide_password, user_cmd
 
 _lg = logging.getLogger(__name__)
@@ -59,6 +60,29 @@ class SeafileClient:
     def __gen_cmd(self, argv: list) -> list:
         return user_cmd(argv)
 
+    def __run(self, argv: list, check: bool = True, **kwargs):
+        """Run a seaf-cli command and, unless told otherwise, check its exit
+        code. An unchecked failure here surfaces much later as a daemon that
+        never becomes ready, with nothing pointing at the real cause."""
+        proc = subprocess.run(self.__gen_cmd(argv), **kwargs)
+        if check and proc.returncode != 0:
+            raise DaemonError(
+                f"Command {' '.join(argv)} failed with exit code {proc.returncode}"
+            )
+        return proc
+
+    def __wait_for_daemon(self, ready: bool, timeout: float, action: str):
+        """Wait until the daemon is ready (or stopped), but never forever."""
+        deadline = time.monotonic() + timeout
+        while self.daemon_ready != ready:
+            if time.monotonic() >= deadline:
+                state = "ready" if ready else "stopped"
+                raise DaemonTimeout(
+                    f"Seafile daemon did not become {state} within {timeout}s"
+                    f" while {action}"
+                )
+            time.sleep(const.DAEMON_POLL_PERIOD)
+
     @property
     def token(self):
         if self.__token is None:
@@ -101,32 +125,26 @@ class SeafileClient:
             return
         cmd = ["seaf-cli", "init", "-d", self.app_dir]
         _lg.info("Initializing seafile config: %s", " ".join(cmd))
-        subprocess.run(self.__gen_cmd(cmd))
+        self.__run(cmd)
 
     def start_daemon(self):
         cmd = ["seaf-cli", "start"]
         _lg.info("Starting seafile daemon: %s", " ".join(cmd))
-        subprocess.run(self.__gen_cmd(cmd))
-        _lg.info("Waiting for seafile daemon to start")
-
-        while True:
-            if self.daemon_ready:
-                break
-            time.sleep(5)
-
+        self.__run(cmd)
+        _lg.info("Waiting up to %ss for seafile daemon to start",
+                 const.DAEMON_START_TIMEOUT)
+        self.__wait_for_daemon(True, const.DAEMON_START_TIMEOUT, "starting")
         _lg.info("Seafile daemon is ready")
 
     def stop_daemon(self):
         cmd = ["seaf-cli", "stop"]
         _lg.info("Stopping seafile daemon: %s", " ".join(cmd))
-        subprocess.run(self.__gen_cmd(cmd))
-        _lg.info("Waiting for seafile daemon to stop")
-
-        while True:
-            if not self.daemon_ready:
-                break
-            time.sleep(5)
-
+        # A daemon that is already gone makes "stop" fail; the state below is
+        # what matters, not this exit code.
+        self.__run(cmd, check=False)
+        _lg.info("Waiting up to %ss for seafile daemon to stop",
+                 const.DAEMON_STOP_TIMEOUT)
+        self.__wait_for_daemon(False, const.DAEMON_STOP_TIMEOUT, "stopping")
         _lg.info("Seafile daemon is stopped")
 
     def get_library_id(self, library) -> Optional[str]:
@@ -135,11 +153,14 @@ class SeafileClient:
                 return lib_id
         return None
 
-    def sync_lib(self, lib_id: str, lib_dir: str):
+    def sync_lib(self, lib_id: str, lib_dir: str) -> bool:
         """
         Sync a library into an already resolved directory. The caller decides
         the directory, see dsc.paths.plan_lib_dirs: the name comes from the
         server and must not be turned into a path here.
+
+        Returns whether the library was accepted. One library that cannot be
+        synced must not stop the others, so this reports instead of raising.
         """
         create_dir(lib_dir)
         cmd = [
@@ -155,7 +176,12 @@ class SeafileClient:
             "Syncing library %s into %s: %s", lib_id, lib_dir,
             " ".join(hide_password(cmd, self.password)),
         )
-        subprocess.run(self.__gen_cmd(cmd))
+        proc = self.__run(cmd, check=False)
+        if proc.returncode != 0:
+            _lg.error("Failed to sync library %s into %s: seaf-cli exited with %s",
+                      lib_id, lib_dir, proc.returncode)
+            return False
+        return True
 
     def __print_tx_task(self, tx_task) -> str:
         """ Print transfer task status """
@@ -261,7 +287,7 @@ class SeafileClient:
             # check current value
             cmd = ["seaf-cli", "config", "-k", key]
             _lg.info("Checking seafile client option: %s", " ".join(cmd))
-            proc = subprocess.run(self.__gen_cmd(cmd), stdout=subprocess.PIPE)
+            proc = self.__run(cmd, stdout=subprocess.PIPE)
             # stdout looks like "option = value"
             cur_value = proc.stdout.decode().strip()
             try:
@@ -274,7 +300,7 @@ class SeafileClient:
             # set new value
             cmd = ["seaf-cli", "config", "-k", key, "-v", str(value)]
             _lg.info("Setting seafile client option: %s", " ".join(cmd))
-            subprocess.run(self.__gen_cmd(cmd))
+            self.__run(cmd)
             need_restart = True
 
         if need_restart:

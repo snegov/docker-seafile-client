@@ -3,13 +3,76 @@
 import argparse
 import logging
 import os
+import signal
 import sys
 
 from dsc import SeafileClient, const
+from dsc.errors import DscError, GracefulShutdown
 from dsc.misc import setup_uid, create_dir
 from dsc.paths import plan_lib_dirs
 
 _lg = logging.getLogger('dsc')
+
+
+def handle_signal(signum, frame):
+    """Turn a stop signal into an exception so the daemon is stopped on the
+    way out instead of the container being killed with the daemon running."""
+    raise GracefulShutdown(signal.Signals(signum).name)
+
+
+def install_signal_handlers():
+    for signum in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(signum, handle_signal)
+
+
+def resolve_libraries(client, requested: str, server: str) -> set:
+    """Map the requested names or IDs to library IDs that are not synced yet."""
+    libs_to_sync = set()
+    for arg_lib in requested.split(sep=":"):
+        lib_id = client.get_library_id(arg_lib)
+        if lib_id:
+            libs_to_sync.add(lib_id)
+        else:
+            _lg.warning("Library %s is not found on server %s", arg_lib, server)
+
+    # don't start to sync libraries already in sync
+    return libs_to_sync - client.get_local_libraries()
+
+
+def run(client, args, libs_dir: str) -> int:
+    """
+    Run the client lifecycle and return the process exit code. The daemon is
+    always stopped on the way out, including on a failure or a stop signal.
+    """
+    rc = 0
+    try:
+        client.init_config()
+        client.start_daemon()
+        client.configure(args, check_for_daemon=False)
+
+        libs_to_sync = resolve_libraries(client, args.libraries, args.server)
+
+        # Library names come from the server, so the directory for each one is
+        # resolved and checked before anything is created or written.
+        lib_dirs = plan_lib_dirs(
+            {lib_id: client.remote_libraries[lib_id] for lib_id in libs_to_sync},
+            libs_dir,
+        )
+        for lib_id, lib_dir in lib_dirs.items():
+            client.sync_lib(lib_id, lib_dir)
+        client.watch_status()
+    except GracefulShutdown as err:
+        _lg.info("Received %s, shutting down", err)
+    except DscError as err:
+        _lg.error("%s", err)
+        rc = 1
+
+    try:
+        client.stop_daemon()
+    except DscError as err:
+        _lg.error("Could not stop seafile daemon cleanly: %s", err)
+        rc = 1
+    return rc
 
 
 def main():
@@ -49,24 +112,12 @@ def main():
     if not args.libraries:
         parser.error("library is not specified")
 
+    install_signal_handlers()
+
     setup_uid(args.uid, args.gid)
     create_dir(const.DEFAULT_APP_DIR)
 
     client = SeafileClient(args.server, args.username, args.password, const.DEFAULT_APP_DIR)
-    client.init_config()
-    client.start_daemon()
-    client.configure(args, check_for_daemon=False)
-
-    libs_to_sync = set()
-    for arg_lib in args.libraries.split(sep=":"):
-        lib_id = client.get_library_id(arg_lib)
-        if lib_id:
-            libs_to_sync.add(lib_id)
-        else:
-            _lg.warning("Library %s is not found on server %s", arg_lib, args.server)
-
-    # don't start to sync libraries already in sync
-    libs_to_sync -= client.get_local_libraries()
 
     # check for deprecated /data directory
     if os.path.isdir(const.DEPRECATED_LIBS_DIR):
@@ -77,18 +128,7 @@ def main():
     else:
         libs_dir = const.DEFAULT_LIBS_DIR
 
-    # Library names come from the server, so the directory for each one is
-    # resolved and checked before anything is created or written.
-    lib_dirs = plan_lib_dirs(
-        {lib_id: client.remote_libraries[lib_id] for lib_id in libs_to_sync},
-        libs_dir,
-    )
-    for lib_id, lib_dir in lib_dirs.items():
-        client.sync_lib(lib_id, lib_dir)
-    client.watch_status()
-
-    client.stop_daemon()
-    return 0
+    return run(client, args, libs_dir)
 
 
 if __name__ == "__main__":

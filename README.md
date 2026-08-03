@@ -66,6 +66,11 @@ The subdirectory is named after the library, with whitespace replaced by
  libraries directory (`/dsc/seafile`, or the deprecated `/data` when that
  exists); a library name can never place it elsewhere.
 
+The container stops gracefully on `docker stop`: it shuts the Seafile daemon
+ down and exits with code 0. It exits with a nonzero code and an explanatory
+ message when the daemon fails to start or stop within its timeout, instead of
+ waiting forever.
+
 `hostname` parameter is optional, but it's recommended to set it to some unique
  value, it will be shown in Seafile webUI as client name (`terminal-dsc` in
  given example).

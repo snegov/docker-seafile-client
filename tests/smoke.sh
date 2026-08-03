@@ -31,13 +31,18 @@ check() {  # check <description> <expected> <actual>
 run() { docker run --rm $PLATFORM_ARG "$@"; }
 
 echo "== imports and pinned client version"
-out=$(run "$IMAGE" python3 -c "
+# The exit status matters as much as the output: a traceback also prints a
+# non-empty last line, and must not be mistaken for a version.
+if out=$(run "$IMAGE" python3 -c "
 import os, seafile, pysearpc, dsc.client, dsc.misc, dsc.paths, dsc.secrets, dsc.config
-print(os.environ.get('SEAFILE_CLI_VERSION', 'unset'))" 2>&1 | tail -1)
-if [ -n "$out" ] && [ "$out" != "unset" ]; then
-    pass "imports resolve, seafile client version is $out"
+print('VERSION', os.environ['SEAFILE_CLI_VERSION'])" 2>&1); then
+    version=$(printf '%s\n' "$out" | sed -n 's/^VERSION //p')
+    case "$version" in
+        [0-9]*.[0-9]*) pass "imports resolve, seafile client version is $version" ;;
+        *) fail "no usable version reported, output was: $out" ;;
+    esac
 else
-    fail "imports or SEAFILE_CLI_VERSION missing: $out"
+    fail "imports or SEAFILE_CLI_VERSION failed: $out"
 fi
 
 echo "== the real daemon starts, reports ready, and stops"
@@ -77,11 +82,24 @@ raise SystemExit(
 )
 " >/dev/null
 
-# Wait for the daemon to be up and the process to be in its watch loop.
+# Wait for the daemon to be up and the process to be in its watch loop. If it
+# never gets there the shutdown assertions mean nothing, so say so loudly
+# instead of measuring the shutdown of something that already exited.
+watching=0
 for _ in $(seq 1 60); do
-    docker logs dsc-smoke 2>&1 | grep -q WATCHING && break
+    if docker logs dsc-smoke 2>&1 | grep -q WATCHING; then watching=1; break; fi
     sleep 1
 done
+
+if [ "$watching" -eq 0 ]; then
+    fail "the container never reached its watch loop, shutdown not measured"
+    printf '        container log:\n'
+    docker logs dsc-smoke 2>&1 | sed 's/^/        /' | tail -20
+    docker rm -f dsc-smoke >/dev/null
+    echo
+    echo "smoke test failed: $failures check(s)"
+    exit 1
+fi
 
 started=$(date +%s)
 docker stop dsc-smoke >/dev/null

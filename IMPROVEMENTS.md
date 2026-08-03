@@ -95,8 +95,14 @@ Acceptance criteria:
   they were compared against, so `usermod` ran on every start.
 - [x] Reject negative and malformed numeric values with useful messages.
 - [x] Do not pass `None` as a Seafile configuration value. Booleans are also
-  rendered as `true`/`false` rather than Python's `True`/`False`, since the
-  daemon reads that setting with its boolean accessor.
+  rendered as `true`/`false` rather than Python's `True`/`False`. This fixed
+  `DISABLE_VERIFY_CERTIFICATE`, which never worked. The daemon reads the key
+  with `seafile_session_config_get_bool`, which is
+  `g_strcmp0(value, "true") == 0`, so it accepts only the exact string
+  `"true"`. Python's `str(True)` stored the string `"True"`, which did not
+  match and was therefore read as false, leaving verification on for anyone
+  who asked to disable it. The default stored the string `"False"`, which is
+  also not `"true"` and so was correctly read as false.
 
 Acceptance criteria:
 

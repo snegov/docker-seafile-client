@@ -1,2 +1,2 @@
-cached_property==1.5.2
+cached_property==2.0.1
 requests==2.34.2

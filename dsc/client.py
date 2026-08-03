@@ -13,7 +13,7 @@ from urllib3.util.retry import Retry
 import seafile
 
 from dsc import const
-from dsc.errors import ConfigError, DaemonError, DaemonTimeout
+from dsc.errors import ConfigError, DaemonError, DaemonTimeout, NetworkError
 from dsc.misc import config_value, create_dir, hide_secrets, user_cmd
 
 _lg = logging.getLogger(__name__)
@@ -48,9 +48,9 @@ class SeafileClient:
 
         self.session = requests.Session()
         retry_strategy = Retry(
-            total=30,
-            backoff_factor=2,
-            backoff_max=60,
+            total=const.HTTP_RETRY_TOTAL,
+            backoff_factor=const.HTTP_RETRY_BACKOFF_FACTOR,
+            backoff_max=const.HTTP_RETRY_BACKOFF_MAX,
             status_forcelist=[500, 502, 503, 504],
             allowed_methods=["GET", "POST"]
         )
@@ -94,9 +94,16 @@ class SeafileClient:
                 raise ConfigError("No password or token available to authenticate")
             url = f"{self.url}/api2/auth-token/"
             _lg.info("Fetching token: %s", url)
-            r = self.session.post(url, data={"username": self.user, "password": self.password})
+            try:
+                r = self.session.post(
+                    url,
+                    data={"username": self.user, "password": self.password},
+                    timeout=const.HTTP_TIMEOUT,
+                )
+            except requests.exceptions.RequestException as err:
+                raise NetworkError(f"Can't reach {url}: {err}") from err
             if r.status_code != 200:
-                raise RuntimeError(f"Can't get token: {r.text}")
+                raise NetworkError(f"Can't get token: {r.text}")
             self.__token = r.json()["token"]
         return self.__token
 
@@ -105,9 +112,12 @@ class SeafileClient:
         url = f"{self.url}/api2/repos/"
         _lg.info("Fetching remote libraries: %s", url)
         auth_header = {"Authorization": f"Token {self.token}"}
-        r = self.session.get(url, headers=auth_header)
+        try:
+            r = self.session.get(url, headers=auth_header, timeout=const.HTTP_TIMEOUT)
+        except requests.exceptions.RequestException as err:
+            raise NetworkError(f"Can't reach {url}: {err}") from err
         if r.status_code != 200:
-            raise RuntimeError(r.text)
+            raise NetworkError(r.text)
         r_libs = {lib["id"]: lib["name"] for lib in r.json()}
         return r_libs
 

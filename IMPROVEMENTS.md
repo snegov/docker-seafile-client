@@ -161,12 +161,17 @@ Acceptance criteria:
 
 ### Networking and protocol behavior
 
-- [ ] Add explicit connect and read timeouts to all HTTP requests.
-- [ ] Define a bounded retry budget with backoff and jitter. Measured: the
-  current `Retry(total=30, backoff_factor=2, backoff_max=60)` with no request
-  timeout waits about 26 minutes on a single unreachable server before giving
+- [x] Add explicit connect and read timeouts to all HTTP requests. See
+  `HTTP_TIMEOUT` in `dsc/const.py`; both `SeafileClient` requests pass it.
+- [x] Define a bounded retry budget with backoff. Measured: the
+  previous `Retry(total=30, backoff_factor=2, backoff_max=60)` with no request
+  timeout waited about 26 minutes on a single unreachable server before giving
   up, which is indistinguishable from a hang. Observed while writing the smoke
-  test, when a probe pointed at an unroutable host.
+  test, when a probe pointed at an unroutable host. Replaced with
+  `HTTP_RETRY_TOTAL`/`HTTP_RETRY_BACKOFF_FACTOR`/`HTTP_RETRY_BACKOFF_MAX`,
+  bounding the worst case to a few minutes; a network failure now raises
+  `NetworkError` instead of an unhandled `requests` exception. `urllib3`'s
+  `Retry` has no jitter parameter, so backoff remains deterministic.
 - [ ] Handle authentication, rate limits, malformed responses, and retryable
   server errors separately.
 - [ ] Make TLS configuration consistent between Python requests and Seafile.

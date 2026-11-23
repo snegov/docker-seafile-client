@@ -24,6 +24,20 @@ _install_seafile_stub()
 
 
 @pytest.fixture(autouse=True)
+def fresh_rpc_client(monkeypatch):
+    """
+    Give every test its own RPC client mock.
+
+    A single module-level mock returns the same ``RpcClient()`` object to every
+    test, so changes one test makes to it leak into the next. One such leak:
+    when ``monkeypatch.setattr`` patches a method on that object, undoing the
+    patch deletes the attribute, and a deleted attribute on a ``MagicMock``
+    stays deleted.
+    """
+    monkeypatch.setattr(sys.modules["seafile"], "RpcClient", mock.MagicMock(name="RpcClient"))
+
+
+@pytest.fixture(autouse=True)
 def no_network(monkeypatch):
     """
     Fail loudly instead of reaching the network.
